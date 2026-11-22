@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SHARDFALL</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0b10; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; }
+  #screen {
+    margin: 0; color: #c8c8d0; font-size: 16px; line-height: 1.15; white-space: pre;
+    font-family: "Cascadia Mono", "DejaVu Sans Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    user-select: none; -webkit-user-select: none; cursor: default; touch-action: manipulation;
+  }
+  #screen span[data-r] { cursor: pointer; }
+</style>
+</head>
+<body>
+<pre id="screen"></pre>
+<!-- Classic scripts (not modules) so the game runs straight from file:// -->
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
