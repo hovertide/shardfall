@@ -1144,3 +1144,62 @@
     if (ui.screen === 'title') used = titleKey(k);
     else if (ui.screen === 'create') used = createKey(e);
     else used = gameKey(k);
+    if (used) { e.preventDefault(); render(); }
+  });
+
+  /* ---------- Mouse ---------- */
+  function cellAt(e) {
+    const r = screen.getBoundingClientRect();
+    const x = Math.floor((e.clientX - r.left) / (r.width / COLS));
+    const y = Math.floor((e.clientY - r.top) / (r.height / ROWS));
+    return x >= 0 && y >= 0 && x < COLS && y < ROWS ? { x, y } : null;
+  }
+
+  screen.addEventListener('mousemove', (e) => {
+    const c = cellAt(e), r = c ? rg[c.y * COLS + c.x] : -1, key = r >= 0 ? regions[r].key : null;
+    const moved = !ui.hcell || !c || c.x !== ui.hcell.x || c.y !== ui.hcell.y;
+    const old = ui.hover;
+    ui.hcell = c;
+    if (key !== old || (key === 'map' && moved)) { ui.hover = key; render(); }
+  });
+  screen.addEventListener('mouseleave', () => { ui.hover = null; ui.hcell = null; render(); });
+  screen.addEventListener('click', (e) => {
+    const c = cellAt(e);
+    if (!c) return;
+    const r = rg[c.y * COLS + c.x];
+    if (r >= 0) { regions[r].fn(c.x, c.y); render(); }
+  });
+  screen.addEventListener('wheel', (e) => {
+    if (ui.screen !== 'game') return;
+    const c = cellAt(e);
+    if (!c || c.y < 22 || c.y > 32) return;
+    e.preventDefault();
+    ui.logScroll = Math.max(0, ui.logScroll + (e.deltaY < 0 ? 2 : -2));
+    render();
+  }, { passive: false });
+
+  /* ---------- Fit the grid to the window ---------- */
+  function fit() {
+    screen.style.fontSize = '20px';
+    const r = screen.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const scale = Math.min((innerWidth - 8) / r.width, (innerHeight - 8) / r.height);
+    screen.style.fontSize = Math.max(6, 20 * scale).toFixed(2) + 'px';
+  }
+
+  /* ---------- Boot ---------- */
+  const STAR_CH = ['*', '·', '+', '◆'], STAR_COL = ['#5fe0e0', '#d08bff', '#ffd866', '#5a5a6a'];
+  for (let k = 0; k < 45; k++) {
+    ui.stars.push({
+      x: Math.floor(Math.random() * COLS), y0: Math.random() * ROWS, sp: 0.0015 + Math.random() * 0.004,
+      ch: STAR_CH[k % 4], c: STAR_COL[Math.floor(Math.random() * 4)],
+    });
+  }
+  ui.saveInfo = readSaveInfo();
+  draw();
+  fit();
+  addEventListener('resize', fit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+  addEventListener('beforeunload', saveGame);
+  addEventListener('pagehide', saveGame);
+})();
