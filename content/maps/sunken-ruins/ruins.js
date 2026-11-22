@@ -5,6 +5,7 @@ SF.define('maps', {
     name: 'Sunken Ruins',
     region: 'ruins', z: 0, tier: 4,
     danger: 'Lv 6-8',
+    walls: 'heavy', wallColor: '#6f8784',     // old masonry: thick lines
     enc: [['wraith', 4], ['knight', 3], ['shade', 3]],
     rate: 0.07, maxGroup: 3,
     sight: 7,

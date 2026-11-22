@@ -42,14 +42,19 @@ console.log('Characters');
 // Symbols that DEFAULT to emoji style (or live in the emoji planes) are banned. Others, like the
 // card suits, are fine: the renderer forces text style with U+FE0E.
 const EMOJI = /\p{Emoji_Presentation}|[\u{1F000}-\u{1FAFF}\u{FE0F}]/u;
+// Style rule: no solid fills. Block elements (half blocks, shades) and filled squares make the
+// screen look like grey bricks; draw with lines, letters and symbols instead.
+const BLOCKS = /[\u2580-\u259F\u25A0\u25AC\u25AE\u25D8\u25D9]/u;
 for (const f of listed) {
   if (!fs.existsSync(path.join(root, f))) continue;
   const txt = fs.readFileSync(path.join(root, f), 'utf8');
   txt.split('\n').forEach((line, i) => {
     if (EMOJI.test(line)) err(`${f}:${i + 1} emoji character: ${line.trim().slice(0, 60)}`);
+    if (BLOCKS.test(line)) err(`${f}:${i + 1} solid block character (use lines and symbols instead): ${line.trim().slice(0, 60)}`);
   });
 }
 ok('no emoji anywhere');
+ok('no solid block characters (style: lines and symbols)');
 
 /* 4. reachability */
 console.log('Maps');

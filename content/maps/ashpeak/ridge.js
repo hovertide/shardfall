@@ -11,7 +11,7 @@ SF.define('maps', {
     retile: {                        // this map's ground is snow and ice
       '.': { name: 'Snow', c: '#dfe8f0' },
       ',': { name: 'Snowdrift', c: '#a8bccc' },
-      'w': { name: 'Thin ice', g: '▭', c: '#9fd4f0', bg: null },
+      'w': { name: 'Thin ice', g: '╌', c: '#9fd4f0' },
     },
     rows: [
       '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^',

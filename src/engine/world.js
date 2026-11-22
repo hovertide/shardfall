@@ -51,20 +51,89 @@
     const o = E.objAt(s, M, x, y);
     return E.terrain(M, x, y).opaque || (o && o.kind === 'secret');
   };
-  function markGone(s, key) { s.world.gone[key] = 1; E.invalidateFov(); }
+  function markGone(s, key) { s.world.gone[key] = 1; E.invalidateFov(); WALLS.delete(s.world.gone); }
+
+  /* ---------- Wall lines ----------
+     Tiles with `join` (stone walls) aren't drawn as solid blocks: each wall
+     cell that touches open ground becomes a piece of a line traced along
+     the edge (╭──╮ │ ╰─), and solid rock further in stays blank. Two wall
+     cells connect only when the edge between them faces open ground, so
+     thick walls get one clean outline instead of a grid of ┬┴. Uncovered
+     secrets count as wall, so the outline doesn't give them away; they are
+     drawn with dashes (┄ ┆) instead: the crack is the hint.
+     The map's `walls` picks the line style: round (default), sharp,
+     double or heavy. Bits: up 1, right 2, down 4, left 8.                 */
+  const JOIN = {
+    round:  ' │─╰││╭├─╯─┴╮┤┬┼',
+    sharp:  ' │─└││┌├─┘─┴┐┤┬┼',
+    double: ' ║═╚║║╔╠═╝═╩╗╣╦╬',
+    heavy:  ' ┃━┗┃┃┏┣━┛━┻┓┫┳╋',
+  };
+  const WALLS = new WeakMap();    // s.world.gone -> Map(map -> { g, mask }); rebuilt when a secret opens
+  function wallLines(s, M) {
+    let byMap = WALLS.get(s.world.gone);
+    if (!byMap) WALLS.set(s.world.gone, (byMap = new Map()));
+    let r = byMap.get(M);
+    if (r) return r;
+    const W = M.W, H = M.H, set = [...(JOIN[M.def.walls] || JOIN.round)];
+    const shut = new Uint8Array((W + 2) * (H + 2)).fill(1);           // padded: off-map counts as rock
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const o = E.objAt(s, M, x, y);
+      shut[(y + 1) * (W + 2) + x + 1] = E.terrain(M, x, y).join || (o && o.kind === 'secret') ? 1 : 0;
+    }
+    const closed = (x, y) => shut[(y + 1) * (W + 2) + x + 1] === 1, open = (x, y) => !closed(x, y);
+    r = { g: new Array(W * H).fill(null), mask: new Uint8Array(W * H) };
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!closed(x, y)) continue;
+      let edge = false;
+      for (let dy = -1; dy <= 1 && !edge; dy++) for (let dx = -1; dx <= 1; dx++) if (open(x + dx, y + dy)) { edge = true; break; }
+      if (!edge) { r.g[y * W + x] = ' '; continue; }
+      let m = 0;
+      if (closed(x, y - 1) && (open(x - 1, y) || open(x - 1, y - 1) || open(x + 1, y) || open(x + 1, y - 1))) m |= 1;
+      if (closed(x + 1, y) && (open(x, y - 1) || open(x + 1, y - 1) || open(x, y + 1) || open(x + 1, y + 1))) m |= 2;
+      if (closed(x, y + 1) && (open(x - 1, y) || open(x - 1, y + 1) || open(x + 1, y) || open(x + 1, y + 1))) m |= 4;
+      if (closed(x - 1, y) && (open(x, y - 1) || open(x - 1, y - 1) || open(x, y + 1) || open(x - 1, y + 1))) m |= 8;
+      let g = set[m];
+      if (!m) {   // no straight neighbours: a diagonal run of wall, or a lone rock
+        const ne = closed(x + 1, y - 1) || closed(x - 1, y + 1), nw = closed(x - 1, y - 1) || closed(x + 1, y + 1);
+        g = ne && nw ? '╳' : ne ? '╱' : nw ? '╲' : '○';
+      }
+      r.g[y * W + x] = g; r.mask[y * W + x] = m;
+    }
+    byMap.set(M, r);
+    return r;
+  }
+  // true when every neighbour is the same kind of tile (so this cell is deep inside a mass of it)
+  function deepIn(M, x, y, t) {
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const n = E.terrain(M, x + dx, y + dy);
+      if (n.key !== t.key && n !== VOID) return false;
+    }
+    return true;
+  }
+  function crackGlyph(r, i) {
+    const m = r.mask[i], h = (m & 10) !== 0, v = (m & 5) !== 0;
+    return h && !v ? '┄' : v && !h ? '┆' : r.g[i] === ' ' ? '┼' : r.g[i];
+  }
   const sightOf = (M) => M.def.sight || (M.def.safe ? 99 : 6);
 
   /* ---------- What a map cell looks like (for the UI) ---------- */
   E.cell = function (s, M, x, y) {
     const t = E.terrain(M, x, y), o = E.objAt(s, M, x, y);
     const base = { g: t.g, c: t.c, bg: t.bg || null, name: t.name, hint: t.hint || null, glow: !!t.glow, vary: t.vary || 0, shimmer: !!t.shimmer };
+    if (t.join) { base.g = wallLines(s, M).g[y * M.W + x] || t.g; base.c = M.def.wallColor || t.c; }
+    else if (t.sparse && deepIn(M, x, y, t)) {
+      const h = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+      base.g = h - Math.floor(h) < t.sparse ? t.g : ' '; base.c = t.c2 || t.c;
+    }
     if (!o) return base;
     const used = s.world.used[o.key];
     switch (o.kind) {
       case 'go': {
         const T = MAPS[String(o.go).split(':')[0]];
         const G = LOOK.go, verb = o.dir === 'up' ? 'Way up to' : o.dir === 'down' ? 'Way down to' : 'Path to';
-        return { g: o.g || G[o.dir] || t.g, c: G.c, bg: o.dir ? null : G.bg, name: `{c}${verb} ${T ? T.def.name : '?'}{/}`, exit: true };
+        const side = y === 0 ? 'n' : y === M.H - 1 ? 's' : x === 0 ? 'w' : x === M.W - 1 ? 'e' : null;
+        return { g: o.g || G[o.dir] || G[side] || t.g, c: G.c, name: `{c}${verb} ${T ? T.def.name : '?'}{/}`, exit: true, glow: !o.dir };
       }
       case 'npc': {
         const n = D.npcs[o.npc];
@@ -73,6 +142,10 @@
       case 'boss': {
         const e = D.enemies[o.boss];
         return { g: o.g || e.glyph || 'M', c: o.c || e.color, name: `{r}${o.label || e.name}{/}` };
+      }
+      case 'secret': {
+        const r = wallLines(s, M), L = LOOK.secret;
+        return { g: crackGlyph(r, y * M.W + x), c: o.c || L.c || M.def.wallColor || D.tiles['#'].c, name: L.name };
       }
       default: {
         const L = LOOK[o.kind];

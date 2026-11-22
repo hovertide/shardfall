@@ -6,7 +6,11 @@
   U.drawTitle = function (now) {
     for (const st of ui.stars) U.put(st.x, Math.floor((st.y0 + now * st.sp) % U.ROWS), st.ch, st.c);
     const logo = U.sprite('logo');
-    logo.frames[0].forEach((ln, k) => U.text(Math.floor((U.COLS - logo.w) / 2), 6 + k, ln.join(''), logo.rows[k] || U.C.c));
+    const lx = Math.floor((U.COLS - logo.w) / 2), shade = logo.shade || {};
+    logo.frames[0].forEach((ln, k) => ln.forEach((ch, i) => {
+      const col = logo.rows[k] || U.C.c;
+      U.put(lx + i, 6 + k, ch, shade[ch] ? U.mix(col, '#0b0b12', shade[ch]) : col);
+    }));
     const cx = Math.floor(U.COLS / 2), bx = cx - 11;
     U.center(cx, 14, 'Shards are falling. The Veil is cracked. You remember nothing.', U.DIM);
     let y = 19;

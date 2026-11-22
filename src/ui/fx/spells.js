@@ -38,13 +38,15 @@
     if (t < 0.6) projectile(ctx.from, g, t / 0.6, '●', ['✦', '•', '∙', '·'], ['#fff2b0', '#ffd040', '#ff9a3d', '#c04020', '#5a2010']);
     else {
       const e = (t - 0.6) / 0.4;
-      // a shaded fireball: hot core, cooling edges
+      // a fireball drawn in symbols: hot core, cooling edges
       const R = 1 + e * 3.5;
       for (let dy = -3; dy <= 3; dy++) for (let dx = -8; dx <= 8; dx++) {
         const d = Math.sqrt((dx / 2) ** 2 + dy ** 2) / R;
         if (d > 1) continue;
         const heat = (1 - d) * (1 - e * 0.8);
-        put(g.cx + dx, g.cy + dy, heat > 0.55 ? '█' : heat > 0.35 ? '▓' : heat > 0.18 ? '▒' : '░', heat > 0.55 ? '#fff2b0' : heat > 0.35 ? '#ffb040' : heat > 0.18 ? '#ff6a2d' : '#8a2a10');
+        const alt = U.hash(dx + g.cx, dy + Math.floor(t * 20)) < 0.5 ? 0 : 1;
+        put(g.cx + dx, g.cy + dy, heat > 0.55 ? '✹✸'[alt] : heat > 0.35 ? '*✶'[alt] : heat > 0.18 ? '+×'[alt] : '·∙'[alt],
+          heat > 0.55 ? '#fff2b0' : heat > 0.35 ? '#ffb040' : heat > 0.18 ? '#ff6a2d' : '#8a2a10');
       }
       burst(g, e, ['✦', '•', '✦', '·'], ['#ffffff', '#ffd040', '#ff7a2d', '#a03010'], 5);
     }
@@ -101,8 +103,8 @@
       const e = Math.min(1, (t - 0.25) / 0.2), end = Math.round(lerp(px - 2, g.cx, e));
       const flick = Math.floor(t * 24) % 2 ? '#ffffff' : '#e8b0ff';
       for (let x = px - 2; x >= end; x--) {
-        put(x, y, '█', flick);
-        if ((x + Math.floor(t * 30)) % 3) { put(x, y - 1, '▄', '#a06ad0'); put(x, y + 1, '▀', '#a06ad0'); }
+        put(x, y, '═', flick);
+        if ((x + Math.floor(t * 30)) % 3) { put(x, y - 1, '∽', '#a06ad0'); put(x, y + 1, '∼', '#a06ad0'); }
       }
       if (e >= 1) burst(g, (t - 0.45) / 0.45, ['✦', '+', '·'], ['#ffffff', '#d08bff', '#6a3a8a'], 4);
     }

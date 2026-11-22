@@ -5,6 +5,7 @@ SF.define('maps', {
     name: 'Emberhollow Village',
     region: 'emberhollow', z: 0, tier: 1,
     danger: 'safe haven', safe: true,
+    walls: 'double', wallColor: '#a3927a',   // wall line style (see content/tiles.js)
     start: [30, 11],                 // new games and respawns start here
     rows: [
       '#############################nn#############################',

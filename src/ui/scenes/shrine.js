@@ -6,7 +6,7 @@
   U.chipLabel = function (c) {
     const rc = D.rarity[c.r].color;
     if (c.type === 'glyph') return `{${rc}}${c.val} ${c.name}{/}`;
-    if (c.type === 'color') return `{${c.val}}■{/} {${rc}}${c.name}{/}`;
+    if (c.type === 'color') return `{${c.val}}●{/} {${rc}}${c.name}{/}`;
     if (c.type === 'frame') {
       const F = U.FRAMES[c.val.style] || U.FRAMES.single;
       return `{${c.val.color}}${F[0]}${F[4]}${F[1]}{/} {${rc}}${c.name}{/}`;

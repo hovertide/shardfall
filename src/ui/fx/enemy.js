@@ -93,7 +93,7 @@
   S.steal = { dur: 520, impact: 0.4, lunge, draw(t, ctx) { particles(SIDE(), ctx.src, t, '◉', '#ffd866'); } };
   S.guard = { dur: 380, impact: 0.5, draw(t, ctx) {
     const g = ctx.src, col = U.mix('#9fd8ff', '#2a4a6a', Math.max(0, t - 0.5) * 2);
-    U.text(g.cx - 3, g.cy - 1, '╭────╮', col); U.text(g.cx - 3, g.cy, '│ ▓▓ │', col); U.text(g.cx - 3, g.cy + 1, '╰╮  ╭╯', col); U.text(g.cx - 2, g.cy + 2, '╰──╯', col);
+    U.text(g.cx - 3, g.cy - 1, '╭────╮', col); U.text(g.cx - 3, g.cy, '│ ╱╲ │', col); U.text(g.cx - 3, g.cy + 1, '╰╮╲╱╭╯', col); U.text(g.cx - 2, g.cy + 2, '╰──╯', col);
   } };
   S.heal = { dur: 420, impact: 0.5, draw(t, ctx) {
     const g = ctx.src;

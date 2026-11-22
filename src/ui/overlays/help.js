@@ -5,8 +5,8 @@
 
   const HELP = [
     ['{y}Move{/}', 'WASD, arrow keys or the numpad (y u b n for diagonals). Or click any explored tile to walk there.'],
-    ['{y}Interact{/}', 'Walk into people ({y}☺{/}), chests ({y}▣{/}), signs ({#c8a070}╤{/}) and the shrine ({m}Ω{/}). Glowing paths lead to new areas.'],
-    ['{y}Terrain{/}', 'Steep slopes ({y}╱{/}) cost stamina to climb. Ledges ({y}▁{/}) can only be hopped down. {c}⇑{/} climbs up, {c}⇓{/} goes down. Cracked walls may hide passages.'],
+    ['{y}Interact{/}', 'Walk into people ({y}☺{/}), chests ({y}⊞{/}), signs ({#c8a070}╤{/}) and the shrine ({m}Ω{/}). Glowing paths lead to new areas.'],
+    ['{y}Terrain{/}', 'Steep slopes ({y}╱{/}) cost stamina to climb. Ledges ({y}_{/}) can only be hopped down. {c}⇑{/} climbs up, {c}⇓{/} goes down. Cracked walls ({d}┄{/}) may hide passages.'],
     ['{y}Growth{/}', 'Each level gives 1 stat point. Standing stones ({c}Π{/}) hidden in the world give more. New areas, lookouts ({w}☼{/}) and first kills give bonus XP; weak foes give little.'],
     ['{y}Items{/}', 'Click an item in the Pack (bottom right) to use it, even mid-fight. [1-8] use the hotbar while exploring. [I] opens the full inventory: click to pick up and place, right-click to use or equip.'],
     null,

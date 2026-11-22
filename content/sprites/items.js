@@ -53,7 +53,7 @@ SF.define('sprites', {
  ╳
 `], color: '#bfe8ff', tint: { '╳': '#7fd8ff', '~': '#7fd8ff' } },
   icon_hand_axe:     { frames: [String.raw`
-▐▀╱
- ╱
-`], color: '#8a6a40', tint: { '▐': '#c8ccd8', '▀': '#c8ccd8' } },
+(╱)
+╱
+`], color: '#8a6a40', tint: { '(': '#c8ccd8', ')': '#c8ccd8' } },
 });

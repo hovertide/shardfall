@@ -51,9 +51,12 @@ tools/                check.js, sim.js, bundle.js, load.js (loads the engine in 
 ```
 
 ## Characters and the screen
-- Any Unicode is fine: box drawing, blocks, arrows, symbols. **No emoji.** `check.js` fails on emoji
-  anywhere, and the screen forces text presentation (U+FE0E + `font-variant-emoji: text`) in case one
-  slips through, so a heart stays a plain-text heart.
+- Style: draw with lines, letters and symbols, not solid fills. Block characters (the U+2580-259F shapes
+  and filled squares) are rejected by `check.js`, and so is emoji. Walls are traced as thin lines, see
+  "Add a map".
+- Any other Unicode is fine: box drawing, arrows, math and geometric symbols. **No emoji:** besides the
+  check, the screen forces text presentation (U+FE0E + `font-variant-emoji: text`) in case one slips
+  through, so a heart stays a plain-text heart.
 - The screen is 128x42 cells. On top of it sits a fine layer at half size (256x84) for small print:
   `U.small(x, y, text, color)` takes main-cell coordinates and accepts .5 (`y + 0.5` = the lower half of
   a row). `U.msmall` takes `{y}color tags{/}`; `U.wrap(text, w * 2)` + `U.drawSmallLine` wraps tiny text.
@@ -116,6 +119,9 @@ A `charge` move winds up for one turn, then does `then: 'otherMove'` next turn.
      W: { boss: 'warden', needs: { q3: 'active' } },
    }
    ```
+   Walls (`#`) are drawn as connected lines along their edge, and solid rock behind them stays blank.
+   Pick the line style per map with `walls: 'round'` (default) / `'sharp'` / `'double'` / `'heavy'`, and
+   optionally `wallColor`. Exits off the map edge show an arrow pointing out; `dir` stairs show ⇑ ⇓.
 3. Exits must lead both ways (the other map needs a marker pointing back). `check.js` verifies this,
    and that every chest, stone and exit can actually be reached.
 4. For vertical areas, give maps the same `region` and a `z` (altitude), and list them top-to-bottom

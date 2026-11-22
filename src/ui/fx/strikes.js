@@ -111,7 +111,7 @@
     }
   } };
   S.defend = { dur: 360, draw(t) {
-    const art = ['╭──────╮', '│  ▓▓  │', '│  ▓▓  │', '╰╮    ╭╯', ' ╰────╯ '];
+    const art = ['╭──────╮', '│  ╱╲  │', '│  ╲╱  │', '╰╮    ╭╯', ' ╰────╯ '];
     const col = U.mix('#9ff8ff', '#2a5a6a', Math.max(0, t - 0.5) * 2), w = U.SIDE.weapon;
     art.forEach((ln, j) => U.text(w.cx - 4, w.bottom - 4 + j, ln, col));
   } };

@@ -40,11 +40,11 @@
     U.button(V.x + V.w - 13, Y, '{y}[Esc]{/} Cancel', 'tm:cancel', U.cancelTiming);
     const r = U.region('tm:hit', U.resolveTiming);
     U.area(BX - 1, Y + 1, BW + 2, 3, r);
-    U.put(BX - 1, Y + 2, '▕', U.DIM); U.put(BX + BW, Y + 2, '▏', U.DIM);
+    U.put(BX - 1, Y + 2, '├', U.DIM); U.put(BX + BW, Y + 2, '┤', U.DIM);
     for (let k = 0; k < BW; k++) {
       const f = (k + 0.5) / BW, d = Math.abs(f - T.center);
       const zone = d <= T.perfect / 2 ? 2 : d <= T.good / 2 ? 1 : 0;
-      U.put(BX + k, Y + 2, zone === 2 ? '█' : zone === 1 ? '▆' : '▁', zone === 2 ? '#ffd040' : zone === 1 ? '#5fb85f' : '#3a3a4a', null, r);
+      U.put(BX + k, Y + 2, zone === 2 ? '◆' : zone === 1 ? '═' : '─', zone === 2 ? '#ffd040' : zone === 1 ? '#5fb85f' : '#4a4a5c', null, r);
     }
     const mx = BX + Math.min(BW - 1, Math.floor(p * BW));
     const mcol = T.done ? (T.done.q === 'perfect' ? '#ffd040' : T.done.q === 'good' ? '#6bdc6b' : '#ff6b6b') : '#ffffff';

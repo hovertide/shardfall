@@ -183,8 +183,14 @@ SF._file("content/tiles.js");
 /* =====================================================================
    Terrain. Each key is the character used when drawing maps (keep those
    plain ASCII so maps stay easy to type); `g` is what's shown on screen
-   and can be any Unicode symbol EXCEPT emoji.
+   and can be any Unicode symbol EXCEPT emoji. Style: thin characters
+   and symbols, not solid blocks (the U+2580-259F block shapes and filled
+   squares are rejected by check.js).
      c / bg  colors              vary    random brightness per tile (texture)
+     join    drawn as connected lines along its edge instead of `g`
+             (map option `walls`: round, sharp, double, heavy)
+     sparse  deep inside a mass of this tile (no open ground nearby), only
+             this share of cells show `g`, in color `c2`; the rest are blank
      block   can't walk onto it  opaque  blocks line of sight
      danger  encounter rate multiplier   climb   stamina cost to enter
      ledge   one-way: hop down (south) over it, can't climb back
@@ -193,25 +199,25 @@ SF._file("content/tiles.js");
    map places them with its own `legend`; their looks are in looks.js.
    ===================================================================== */
 SF.define('tiles', {
-  '#': { name: 'Stone wall', g: '█', c: '#45455a', vary: 0.12, block: true, opaque: true },
+  '#': { name: 'Stone wall', g: '#', join: true, c: '#7d7a92', vary: 0.05, block: true, opaque: true },
   '.': { name: 'Path', g: '·', c: '#74747f' },
   ',': { name: 'Grass', g: ',', c: '#3f8f4a', vary: 0.2, danger: 0.6 },
   '"': { name: 'Tall grass', g: 'ʬ', c: '#55b060', vary: 0.2, danger: 1, hint: 'beasts hide here' },
   'T': { name: 'Pine', g: '♣', c: '#2e8e4e', vary: 0.15, block: true },
   'Y': { name: 'Old tree', g: 'ϒ', c: '#8a7a4a', block: true },
-  '~': { name: 'Deep water', g: '≈', c: '#3d72d6', bg: '#0c1730', block: true, shimmer: true, msg: 'The water runs deep and cold.' },
+  '~': { name: 'Deep water', g: '≈', c: '#4a82e6', block: true, shimmer: true, msg: 'The water runs deep and cold.' },
   'w': { name: 'Shallows', g: '∽', c: '#6a9ae0', shimmer: true, danger: 0.5 },
   '=': { name: 'Bridge', g: '═', c: '#b08850' },
-  '+': { name: 'Door', g: '▯', c: '#c09060' },
+  '+': { name: 'Door', g: '∩', c: '#c09060' },
   'o': { name: 'Fountain', g: '○', c: '#7fb0d0', block: true },
   '|': { name: 'Fence', g: '│', c: '#8a6a40', block: true },
   '-': { name: 'Fence', g: '─', c: '#8a6a40', block: true },
-  '^': { name: 'Mountain rock', g: '▲', c: '#8a7f70', vary: 0.18, block: true, opaque: true, msg: 'Sheer rock. Far too steep to climb here.' },
+  '^': { name: 'Mountain rock', g: '∧', c: '#9a8f80', c2: '#5a544c', sparse: 0.3, vary: 0.18, block: true, opaque: true, msg: 'Sheer rock. Far too steep to climb here.' },
   ':': { name: 'Scree', g: '∴', c: '#9a9080', vary: 0.12, danger: 0.7 },
   '/': { name: 'Steep slope', g: '╱', c: '#c8a870', climb: 3, hint: 'climbing costs stamina' },
-  '_': { name: 'Ledge', g: '▁', c: '#d0b080', ledge: true, hint: 'hop down from above' },
-  '%': { name: 'Rubble', g: '▒', c: '#6a6058', block: true },
-  '0': { name: 'Pillar', g: '◙', c: '#8a8a9a', block: true, opaque: true },
+  '_': { name: 'Ledge', g: '_', c: '#d0b080', ledge: true, hint: 'hop down from above' },
+  '%': { name: 'Rubble', g: '∷', c: '#6a6058', block: true },
+  '0': { name: 'Pillar', g: '◎', c: '#8a8a9a', block: true, opaque: true },
   'x': { name: 'Shard crystal', g: '◆', c: '#5fe0e0', block: true, glow: true },
 });
 
@@ -224,13 +230,13 @@ SF._file("content/looks.js");
    ===================================================================== */
 SF.set('looks', {
   shrine: { g: 'Ω', c: '#d08bff', name: '{m}Shrine of Echoes{/} {d}(spend shards){/}' },
-  chest:  { g: '▣', c: '#ffb020', name: '{y}Chest{/}' },
+  chest:  { g: '⊞', c: '#ffb020', name: '{y}Chest{/}' },
   stone:  { g: 'Π', c: '#7fffe0', name: '{c}Standing stone{/} {d}(it hums){/}', glow: true, spent: '#4a5a58' },
   vista:  { g: '☼', c: '#ffffff', name: '{w}Lookout{/}', glow: true, spent: '#8a8a96' },
   sign:   { g: '╤', c: '#c8a070', name: 'Signpost' },
-  secret: { g: '█', c: '#55525f', name: 'Cracked wall' },
-  // exits: stairs get an arrow, edge exits glow on the ground
-  go:     { up: '⇑', down: '⇓', c: '#5fe0e0', bg: '#0f2a2e' },
+  secret: { name: 'Cracked wall' },     // drawn as part of the wall line, dashed: ┄ ┆
+  // exits: stairs get a double arrow, paths off the map edge an arrow pointing out
+  go:     { up: '⇑', down: '⇓', n: '↑', e: '→', s: '↓', w: '←', c: '#5fe0e0' },
 });
 
 SF._file("content/regions.js");
@@ -263,6 +269,7 @@ SF.define('maps', {
     name: 'Emberhollow Village',
     region: 'emberhollow', z: 0, tier: 1,
     danger: 'safe haven', safe: true,
+    walls: 'double', wallColor: '#a3927a',   // wall line style (see content/tiles.js)
     start: [30, 11],                 // new games and respawns start here
     rows: [
       '#############################nn#############################',
@@ -542,7 +549,7 @@ SF.define('maps', {
     retile: {                        // this map's ground is snow and ice
       '.': { name: 'Snow', c: '#dfe8f0' },
       ',': { name: 'Snowdrift', c: '#a8bccc' },
-      'w': { name: 'Thin ice', g: '▭', c: '#9fd4f0', bg: null },
+      'w': { name: 'Thin ice', g: '╌', c: '#9fd4f0' },
     },
     rows: [
       '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^',
@@ -633,6 +640,7 @@ SF.define('maps', {
     name: 'Sunken Ruins',
     region: 'ruins', z: 0, tier: 4,
     danger: 'Lv 6-8',
+    walls: 'heavy', wallColor: '#6f8784',     // old masonry: thick lines
     enc: [['wraith', 4], ['knight', 3], ['shade', 3]],
     rate: 0.07, maxGroup: 3,
     sight: 7,
@@ -1715,7 +1723,7 @@ SF._file("content/sprites/ui/art.js");
 'use strict';
 /* =====================================================================
    Interface art: the title logo and the Shrine of Echoes.
-   Pictures are plain ASCII inside String.raw`...` so backslashes don't
+   Pictures go inside String.raw`...` so backslashes don't
    need escaping: paste art straight in. Each sprite can have:
      frames  one or more pictures (cycled slowly as an idle animation)
      tint    per-character colors, e.g. { o: '#ff4040' } paints every 'o'
@@ -1723,18 +1731,18 @@ SF._file("content/sprites/ui/art.js");
    The base color comes from whatever uses the sprite (e.g. enemy color).
    ===================================================================== */
 SF.define('sprites', {
-  logo: {   // 72 x 6  (figlet font "ANSI Shadow")
+  logo: {   // 95 x 5  (figlet font "Sub-Zero")
     frames: [
       String.raw`
-███████╗██╗  ██╗ █████╗ ██████╗ ██████╗ ███████╗ █████╗ ██╗     ██╗
-██╔════╝██║  ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝██╔══██╗██║     ██║
-███████╗███████║███████║██████╔╝██║  ██║█████╗  ███████║██║     ██║
-╚════██║██╔══██║██╔══██║██╔══██╗██║  ██║██╔══╝  ██╔══██║██║     ██║
-███████║██║  ██║██║  ██║██║  ██║██████╔╝██║     ██║  ██║███████╗███████╗
-╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝
+ ______     __  __     ______     ______     _____     ______   ______     __         __
+/\  ___\   /\ \_\ \   /\  __ \   /\  == \   /\  __-.  /\  ___\ /\  __ \   /\ \       /\ \
+\ \___  \  \ \  __ \  \ \  __ \  \ \  __<   \ \ \/\ \ \ \  __\ \ \  __ \  \ \ \____  \ \ \____
+ \/\_____\  \ \_\ \_\  \ \_\ \_\  \ \_\ \_\  \ \____-  \ \_\    \ \_\ \_\  \ \_____\  \ \_____\
+  \/_____/   \/_/\/_/   \/_/\/_/   \/_/ /_/   \/____/   \/_/     \/_/\/_/   \/_____/   \/_____/
 `,
     ],
-    rows: ['#5fe0e0', '#72d2f2', '#86c2ff', '#a4adff', '#c096ff', '#d08bff'],   // one color per line, top to bottom
+    rows: ['#5fe0e0', '#7ccff5', '#9cbcff', '#bca2ff', '#d08bff'],   // one color per line, top to bottom
+    shade: { '\\': 0.3, '/': 0.3 },   // these characters are drawn darker: the letters' sides
   },
 
   shrine: {   // 14 x 7
@@ -1809,9 +1817,9 @@ SF.define('sprites', {
  ╳
 `], color: '#bfe8ff', tint: { '╳': '#7fd8ff', '~': '#7fd8ff' } },
   icon_hand_axe:     { frames: [String.raw`
-▐▀╱
- ╱
-`], color: '#8a6a40', tint: { '▐': '#c8ccd8', '▀': '#c8ccd8' } },
+(╱)
+╱
+`], color: '#8a6a40', tint: { '(': '#c8ccd8', ')': '#c8ccd8' } },
 });
 
 SF._file("src/engine/core.js");
@@ -2251,20 +2259,89 @@ SF._file("src/engine/world.js");
     const o = E.objAt(s, M, x, y);
     return E.terrain(M, x, y).opaque || (o && o.kind === 'secret');
   };
-  function markGone(s, key) { s.world.gone[key] = 1; E.invalidateFov(); }
+  function markGone(s, key) { s.world.gone[key] = 1; E.invalidateFov(); WALLS.delete(s.world.gone); }
+
+  /* ---------- Wall lines ----------
+     Tiles with `join` (stone walls) aren't drawn as solid blocks: each wall
+     cell that touches open ground becomes a piece of a line traced along
+     the edge (╭──╮ │ ╰─), and solid rock further in stays blank. Two wall
+     cells connect only when the edge between them faces open ground, so
+     thick walls get one clean outline instead of a grid of ┬┴. Uncovered
+     secrets count as wall, so the outline doesn't give them away; they are
+     drawn with dashes (┄ ┆) instead: the crack is the hint.
+     The map's `walls` picks the line style: round (default), sharp,
+     double or heavy. Bits: up 1, right 2, down 4, left 8.                 */
+  const JOIN = {
+    round:  ' │─╰││╭├─╯─┴╮┤┬┼',
+    sharp:  ' │─└││┌├─┘─┴┐┤┬┼',
+    double: ' ║═╚║║╔╠═╝═╩╗╣╦╬',
+    heavy:  ' ┃━┗┃┃┏┣━┛━┻┓┫┳╋',
+  };
+  const WALLS = new WeakMap();    // s.world.gone -> Map(map -> { g, mask }); rebuilt when a secret opens
+  function wallLines(s, M) {
+    let byMap = WALLS.get(s.world.gone);
+    if (!byMap) WALLS.set(s.world.gone, (byMap = new Map()));
+    let r = byMap.get(M);
+    if (r) return r;
+    const W = M.W, H = M.H, set = [...(JOIN[M.def.walls] || JOIN.round)];
+    const shut = new Uint8Array((W + 2) * (H + 2)).fill(1);           // padded: off-map counts as rock
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const o = E.objAt(s, M, x, y);
+      shut[(y + 1) * (W + 2) + x + 1] = E.terrain(M, x, y).join || (o && o.kind === 'secret') ? 1 : 0;
+    }
+    const closed = (x, y) => shut[(y + 1) * (W + 2) + x + 1] === 1, open = (x, y) => !closed(x, y);
+    r = { g: new Array(W * H).fill(null), mask: new Uint8Array(W * H) };
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!closed(x, y)) continue;
+      let edge = false;
+      for (let dy = -1; dy <= 1 && !edge; dy++) for (let dx = -1; dx <= 1; dx++) if (open(x + dx, y + dy)) { edge = true; break; }
+      if (!edge) { r.g[y * W + x] = ' '; continue; }
+      let m = 0;
+      if (closed(x, y - 1) && (open(x - 1, y) || open(x - 1, y - 1) || open(x + 1, y) || open(x + 1, y - 1))) m |= 1;
+      if (closed(x + 1, y) && (open(x, y - 1) || open(x + 1, y - 1) || open(x, y + 1) || open(x + 1, y + 1))) m |= 2;
+      if (closed(x, y + 1) && (open(x - 1, y) || open(x - 1, y + 1) || open(x + 1, y) || open(x + 1, y + 1))) m |= 4;
+      if (closed(x - 1, y) && (open(x, y - 1) || open(x - 1, y - 1) || open(x, y + 1) || open(x - 1, y + 1))) m |= 8;
+      let g = set[m];
+      if (!m) {   // no straight neighbours: a diagonal run of wall, or a lone rock
+        const ne = closed(x + 1, y - 1) || closed(x - 1, y + 1), nw = closed(x - 1, y - 1) || closed(x + 1, y + 1);
+        g = ne && nw ? '╳' : ne ? '╱' : nw ? '╲' : '○';
+      }
+      r.g[y * W + x] = g; r.mask[y * W + x] = m;
+    }
+    byMap.set(M, r);
+    return r;
+  }
+  // true when every neighbour is the same kind of tile (so this cell is deep inside a mass of it)
+  function deepIn(M, x, y, t) {
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const n = E.terrain(M, x + dx, y + dy);
+      if (n.key !== t.key && n !== VOID) return false;
+    }
+    return true;
+  }
+  function crackGlyph(r, i) {
+    const m = r.mask[i], h = (m & 10) !== 0, v = (m & 5) !== 0;
+    return h && !v ? '┄' : v && !h ? '┆' : r.g[i] === ' ' ? '┼' : r.g[i];
+  }
   const sightOf = (M) => M.def.sight || (M.def.safe ? 99 : 6);
 
   /* ---------- What a map cell looks like (for the UI) ---------- */
   E.cell = function (s, M, x, y) {
     const t = E.terrain(M, x, y), o = E.objAt(s, M, x, y);
     const base = { g: t.g, c: t.c, bg: t.bg || null, name: t.name, hint: t.hint || null, glow: !!t.glow, vary: t.vary || 0, shimmer: !!t.shimmer };
+    if (t.join) { base.g = wallLines(s, M).g[y * M.W + x] || t.g; base.c = M.def.wallColor || t.c; }
+    else if (t.sparse && deepIn(M, x, y, t)) {
+      const h = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+      base.g = h - Math.floor(h) < t.sparse ? t.g : ' '; base.c = t.c2 || t.c;
+    }
     if (!o) return base;
     const used = s.world.used[o.key];
     switch (o.kind) {
       case 'go': {
         const T = MAPS[String(o.go).split(':')[0]];
         const G = LOOK.go, verb = o.dir === 'up' ? 'Way up to' : o.dir === 'down' ? 'Way down to' : 'Path to';
-        return { g: o.g || G[o.dir] || t.g, c: G.c, bg: o.dir ? null : G.bg, name: `{c}${verb} ${T ? T.def.name : '?'}{/}`, exit: true };
+        const side = y === 0 ? 'n' : y === M.H - 1 ? 's' : x === 0 ? 'w' : x === M.W - 1 ? 'e' : null;
+        return { g: o.g || G[o.dir] || G[side] || t.g, c: G.c, name: `{c}${verb} ${T ? T.def.name : '?'}{/}`, exit: true, glow: !o.dir };
       }
       case 'npc': {
         const n = D.npcs[o.npc];
@@ -2273,6 +2350,10 @@ SF._file("src/engine/world.js");
       case 'boss': {
         const e = D.enemies[o.boss];
         return { g: o.g || e.glyph || 'M', c: o.c || e.color, name: `{r}${o.label || e.name}{/}` };
+      }
+      case 'secret': {
+        const r = wallLines(s, M), L = LOOK.secret;
+        return { g: crackGlyph(r, y * M.W + x), c: o.c || L.c || M.def.wallColor || D.tiles['#'].c, name: L.name };
       }
       default: {
         const L = LOOK[o.kind];
@@ -4712,7 +4793,7 @@ SF._file("src/ui/fx/strikes.js");
     }
   } };
   S.defend = { dur: 360, draw(t) {
-    const art = ['╭──────╮', '│  ▓▓  │', '│  ▓▓  │', '╰╮    ╭╯', ' ╰────╯ '];
+    const art = ['╭──────╮', '│  ╱╲  │', '│  ╲╱  │', '╰╮    ╭╯', ' ╰────╯ '];
     const col = U.mix('#9ff8ff', '#2a5a6a', Math.max(0, t - 0.5) * 2), w = U.SIDE.weapon;
     art.forEach((ln, j) => U.text(w.cx - 4, w.bottom - 4 + j, ln, col));
   } };
@@ -4772,13 +4853,15 @@ SF._file("src/ui/fx/spells.js");
     if (t < 0.6) projectile(ctx.from, g, t / 0.6, '●', ['✦', '•', '∙', '·'], ['#fff2b0', '#ffd040', '#ff9a3d', '#c04020', '#5a2010']);
     else {
       const e = (t - 0.6) / 0.4;
-      // a shaded fireball: hot core, cooling edges
+      // a fireball drawn in symbols: hot core, cooling edges
       const R = 1 + e * 3.5;
       for (let dy = -3; dy <= 3; dy++) for (let dx = -8; dx <= 8; dx++) {
         const d = Math.sqrt((dx / 2) ** 2 + dy ** 2) / R;
         if (d > 1) continue;
         const heat = (1 - d) * (1 - e * 0.8);
-        put(g.cx + dx, g.cy + dy, heat > 0.55 ? '█' : heat > 0.35 ? '▓' : heat > 0.18 ? '▒' : '░', heat > 0.55 ? '#fff2b0' : heat > 0.35 ? '#ffb040' : heat > 0.18 ? '#ff6a2d' : '#8a2a10');
+        const alt = U.hash(dx + g.cx, dy + Math.floor(t * 20)) < 0.5 ? 0 : 1;
+        put(g.cx + dx, g.cy + dy, heat > 0.55 ? '✹✸'[alt] : heat > 0.35 ? '*✶'[alt] : heat > 0.18 ? '+×'[alt] : '·∙'[alt],
+          heat > 0.55 ? '#fff2b0' : heat > 0.35 ? '#ffb040' : heat > 0.18 ? '#ff6a2d' : '#8a2a10');
       }
       burst(g, e, ['✦', '•', '✦', '·'], ['#ffffff', '#ffd040', '#ff7a2d', '#a03010'], 5);
     }
@@ -4835,8 +4918,8 @@ SF._file("src/ui/fx/spells.js");
       const e = Math.min(1, (t - 0.25) / 0.2), end = Math.round(lerp(px - 2, g.cx, e));
       const flick = Math.floor(t * 24) % 2 ? '#ffffff' : '#e8b0ff';
       for (let x = px - 2; x >= end; x--) {
-        put(x, y, '█', flick);
-        if ((x + Math.floor(t * 30)) % 3) { put(x, y - 1, '▄', '#a06ad0'); put(x, y + 1, '▀', '#a06ad0'); }
+        put(x, y, '═', flick);
+        if ((x + Math.floor(t * 30)) % 3) { put(x, y - 1, '∽', '#a06ad0'); put(x, y + 1, '∼', '#a06ad0'); }
       }
       if (e >= 1) burst(g, (t - 0.45) / 0.45, ['✦', '+', '·'], ['#ffffff', '#d08bff', '#6a3a8a'], 4);
     }
@@ -4955,7 +5038,7 @@ SF._file("src/ui/fx/enemy.js");
   S.steal = { dur: 520, impact: 0.4, lunge, draw(t, ctx) { particles(SIDE(), ctx.src, t, '◉', '#ffd866'); } };
   S.guard = { dur: 380, impact: 0.5, draw(t, ctx) {
     const g = ctx.src, col = U.mix('#9fd8ff', '#2a4a6a', Math.max(0, t - 0.5) * 2);
-    U.text(g.cx - 3, g.cy - 1, '╭────╮', col); U.text(g.cx - 3, g.cy, '│ ▓▓ │', col); U.text(g.cx - 3, g.cy + 1, '╰╮  ╭╯', col); U.text(g.cx - 2, g.cy + 2, '╰──╯', col);
+    U.text(g.cx - 3, g.cy - 1, '╭────╮', col); U.text(g.cx - 3, g.cy, '│ ╱╲ │', col); U.text(g.cx - 3, g.cy + 1, '╰╮╲╱╭╯', col); U.text(g.cx - 2, g.cy + 2, '╰──╯', col);
   } };
   S.heal = { dur: 420, impact: 0.5, draw(t, ctx) {
     const g = ctx.src;
@@ -4997,7 +5080,11 @@ SF._file("src/ui/scenes/title.js");
   U.drawTitle = function (now) {
     for (const st of ui.stars) U.put(st.x, Math.floor((st.y0 + now * st.sp) % U.ROWS), st.ch, st.c);
     const logo = U.sprite('logo');
-    logo.frames[0].forEach((ln, k) => U.text(Math.floor((U.COLS - logo.w) / 2), 6 + k, ln.join(''), logo.rows[k] || U.C.c));
+    const lx = Math.floor((U.COLS - logo.w) / 2), shade = logo.shade || {};
+    logo.frames[0].forEach((ln, k) => ln.forEach((ch, i) => {
+      const col = logo.rows[k] || U.C.c;
+      U.put(lx + i, 6 + k, ch, shade[ch] ? U.mix(col, '#0b0b12', shade[ch]) : col);
+    }));
     const cx = Math.floor(U.COLS / 2), bx = cx - 11;
     U.center(cx, 14, 'Shards are falling. The Veil is cracked. You remember nothing.', U.DIM);
     let y = 19;
@@ -5704,11 +5791,11 @@ SF._file("src/ui/scenes/timing.js");
     U.button(V.x + V.w - 13, Y, '{y}[Esc]{/} Cancel', 'tm:cancel', U.cancelTiming);
     const r = U.region('tm:hit', U.resolveTiming);
     U.area(BX - 1, Y + 1, BW + 2, 3, r);
-    U.put(BX - 1, Y + 2, '▕', U.DIM); U.put(BX + BW, Y + 2, '▏', U.DIM);
+    U.put(BX - 1, Y + 2, '├', U.DIM); U.put(BX + BW, Y + 2, '┤', U.DIM);
     for (let k = 0; k < BW; k++) {
       const f = (k + 0.5) / BW, d = Math.abs(f - T.center);
       const zone = d <= T.perfect / 2 ? 2 : d <= T.good / 2 ? 1 : 0;
-      U.put(BX + k, Y + 2, zone === 2 ? '█' : zone === 1 ? '▆' : '▁', zone === 2 ? '#ffd040' : zone === 1 ? '#5fb85f' : '#3a3a4a', null, r);
+      U.put(BX + k, Y + 2, zone === 2 ? '◆' : zone === 1 ? '═' : '─', zone === 2 ? '#ffd040' : zone === 1 ? '#5fb85f' : '#4a4a5c', null, r);
     }
     const mx = BX + Math.min(BW - 1, Math.floor(p * BW));
     const mcol = T.done ? (T.done.q === 'perfect' ? '#ffd040' : T.done.q === 'good' ? '#6bdc6b' : '#ff6b6b') : '#ffffff';
@@ -5795,7 +5882,7 @@ SF._file("src/ui/scenes/shrine.js");
   U.chipLabel = function (c) {
     const rc = D.rarity[c.r].color;
     if (c.type === 'glyph') return `{${rc}}${c.val} ${c.name}{/}`;
-    if (c.type === 'color') return `{${c.val}}■{/} {${rc}}${c.name}{/}`;
+    if (c.type === 'color') return `{${c.val}}●{/} {${rc}}${c.name}{/}`;
     if (c.type === 'frame') {
       const F = U.FRAMES[c.val.style] || U.FRAMES.single;
       return `{${c.val.color}}${F[0]}${F[4]}${F[1]}{/} {${rc}}${c.name}{/}`;
@@ -6203,8 +6290,8 @@ SF._file("src/ui/overlays/help.js");
 
   const HELP = [
     ['{y}Move{/}', 'WASD, arrow keys or the numpad (y u b n for diagonals). Or click any explored tile to walk there.'],
-    ['{y}Interact{/}', 'Walk into people ({y}☺{/}), chests ({y}▣{/}), signs ({#c8a070}╤{/}) and the shrine ({m}Ω{/}). Glowing paths lead to new areas.'],
-    ['{y}Terrain{/}', 'Steep slopes ({y}╱{/}) cost stamina to climb. Ledges ({y}▁{/}) can only be hopped down. {c}⇑{/} climbs up, {c}⇓{/} goes down. Cracked walls may hide passages.'],
+    ['{y}Interact{/}', 'Walk into people ({y}☺{/}), chests ({y}⊞{/}), signs ({#c8a070}╤{/}) and the shrine ({m}Ω{/}). Glowing paths lead to new areas.'],
+    ['{y}Terrain{/}', 'Steep slopes ({y}╱{/}) cost stamina to climb. Ledges ({y}_{/}) can only be hopped down. {c}⇑{/} climbs up, {c}⇓{/} goes down. Cracked walls ({d}┄{/}) may hide passages.'],
     ['{y}Growth{/}', 'Each level gives 1 stat point. Standing stones ({c}Π{/}) hidden in the world give more. New areas, lookouts ({w}☼{/}) and first kills give bonus XP; weak foes give little.'],
     ['{y}Items{/}', 'Click an item in the Pack (bottom right) to use it, even mid-fight. [1-8] use the hotbar while exploring. [I] opens the full inventory: click to pick up and place, right-click to use or equip.'],
     null,
