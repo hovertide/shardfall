@@ -16,10 +16,11 @@
 </style>
 </head>
 <body>
-<pre id="screen"></pre>
-<!-- Classic scripts (not modules) so the game runs straight from file:// -->
-<script src="data.js"></script>
-<script src="engine.js"></script>
-<script src="ui.js"></script>
+<pre id="screen">Loading SHARDFALL...</pre>
+<!-- Plain scripts (not modules) so the game runs straight from file://.
+     manifest.js lists every other file; boot.js loads them in order. -->
+<script src="manifest.js"></script>
+<script src="src/registry.js"></script>
+<script src="src/boot.js"></script>
 </body>
 </html>
