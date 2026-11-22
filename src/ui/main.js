@@ -32,6 +32,7 @@
     U.drawSide(now);
     U.anim.draw(now);          // effects on top of both panels
     U.drawLog();
+    U.drawPack();
     U.drawBar();
     if (!U.anim.busy()) {
       if (s.scene === 'dialog') U.drawDialog();
@@ -40,7 +41,7 @@
       else if (s.scene === 'gameover') U.drawGameOver();
     }
     switch (ui.overlay) {
-      case 'inv': U.drawInv(); break;
+      case 'inv': U.drawInv(now); break;
       case 'char': U.drawChar(); break;
       case 'quests': U.drawQuests(); break;
       case 'journal': U.drawJournal(now); break;
@@ -65,7 +66,7 @@
       console.error(e);
       U.text(1, 0, ` Drawing error: ${e.message} `.slice(0, 98), '#ff6b6b', '#2a0a10');
     }
-    if (SF.problems.length && ui.screen === 'title') U.text(1, 33, ` ${SF.problems.length} content problem(s): see the browser console (F12) `, '#ff9a4a');
+    if (SF.problems.length && ui.screen === 'title') U.text(1, U.ROWS - 1, ` ${SF.problems.length} content problem(s): see the browser console (F12) `, '#ff9a4a');
     U.flush();
     const dt = nextFrame(now);
     if (dt && (!timer || now + dt < due - 4)) {     // (re)schedule if we need a frame sooner
@@ -82,7 +83,9 @@
     const r = el.getBoundingClientRect();
     if (!r.width || !r.height) return;
     const scale = Math.min((innerWidth - 8) / r.width, (innerHeight - 8) / r.height);
-    el.style.fontSize = Math.max(6, 20 * scale).toFixed(2) + 'px';
+    const px = Math.max(6, 20 * scale);
+    el.style.fontSize = px.toFixed(2) + 'px';
+    U.fineEl.style.fontSize = (px / 2).toFixed(3) + 'px';    // the tiny-text layer is exactly half size
   }
 
   /* ---------- Boot ---------- */

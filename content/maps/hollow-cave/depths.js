@@ -31,7 +31,7 @@ SF.define('maps', {
       '############################################################',
     ],
     legend: {
-      U: { go: 'cave:D', glyph: '<' },           // stairs up
+      U: { go: 'cave:D', dir: 'up' },           // stairs up
       '*': { npc: 'altar' },
       C: { chest: { weapon: 'ember_blade', gold: [20, 40] } },
       s: { secret: true },                       // a cracked wall you can walk through

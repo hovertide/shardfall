@@ -11,7 +11,7 @@ SF.define('maps', {
     retile: {                        // this map's ground is snow and ice
       '.': { name: 'Snow', c: '#dfe8f0' },
       ',': { name: 'Snowdrift', c: '#a8bccc' },
-      'w': { name: 'Thin ice', g: '=', c: '#9fd4f0', bg: null },
+      'w': { name: 'Thin ice', g: '▭', c: '#9fd4f0', bg: null },
     },
     rows: [
       '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^',
@@ -36,8 +36,8 @@ SF.define('maps', {
       '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^',
     ],
     legend: {
-      D: { go: 'switchbacks:U', glyph: '>' },
-      U: { go: 'summit:D', glyph: '<' },
+      D: { go: 'switchbacks:U', dir: 'down' },
+      U: { go: 'summit:D', dir: 'up' },
       C: { chest: { learn: 'whirlwind', gold: [20, 40] } },
       K: { chest: { weapon: 'galecutter' } },
       s: { secret: true },

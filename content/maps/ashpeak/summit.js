@@ -34,7 +34,7 @@ SF.define('maps', {
       '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^',
     ],
     legend: {
-      D: { go: 'ridge:U', glyph: '>' },
+      D: { go: 'ridge:U', dir: 'down' },
       V: { boss: 'stormcrow' },
       C: { chest: { learn: 'thunder', shards: 10 } },
       I: { stone: true },

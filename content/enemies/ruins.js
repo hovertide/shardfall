@@ -18,7 +18,7 @@ SF.define('enemies', {
   },
   warden: {
     name: 'The Veil Warden', lvl: 9, hp: 700, atk: 26, def: 8, xp: 300, gold: [200, 200], color: '#ff5577',
-    boss: true, solo: true, glyph: 'W',
+    boss: true, solo: true, glyph: 'Ψ',
     moves: [['rend', 3], ['veil_rend', 1], ['void_whispers', 1], ['devour_light', 1]],
     phase2: { at: 0.5, text: '{r}The Warden screams. The crack in the sky widens and its eyes multiply!{/}',
       moves: [['rend', 2], ['veil_rend', 1], ['void_whispers', 1], ['devour_light', 1], ['gather_dark', 1]] },

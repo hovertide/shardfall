@@ -8,25 +8,25 @@
    ===================================================================== */
 (function () {
   const U = SF.UI, S = U.FX.strike;
-  const clip = (x, y) => x >= 1 && x <= 60 && y >= 1 && y <= 20;
+  const V = U.L.VIEW, X1 = V.x + V.w - 1, Y1 = V.y + V.h - 1;
+  const clip = (x, y) => x >= V.x && x <= X1 && y >= V.y && y <= Y1;
   const put = (x, y, c, col) => { if (clip(x, y)) U.put(x, y, c, col); };
   // head -> tail color ramp for streaks
   const ramp = (k, n, hot, mid, cold) => (k === 0 ? hot : k < n * 0.5 ? mid : cold);
 
-  /* A slash streak through the target. dir 0: '/'  1: '\'  2: '-' */
+  /* A slash streak through the target. dir 0: ╱   1: ╲   2: ━ */
   function streak(g, t, dir, cols, thick) {
     const half = Math.max(3, Math.ceil((g.bottom - g.top + 1) / 2) + 1);
     const pts = [];
     for (let k = -half; k <= half; k++) {
-      if (dir === 2) pts.push([g.cx + k * 2, g.cy, '-'], [g.cx + k * 2 + 1, g.cy, '-']);
+      if (dir === 2) pts.push([g.cx + k * 2, g.cy, '━'], [g.cx + k * 2 + 1, g.cy, '━']);
       else {
         const x = g.cx + (dir === 0 ? -k : k) * 2, y = g.cy + k;
-        const c = dir === 0 ? '/' : '\\';
+        const c = dir === 0 ? '╱' : '╲';
         pts.push([x, y, c]);
         if (thick) pts.push([x + 1, y, c]);
       }
     }
-    if (dir !== 2 && dir === 0) pts.sort((a, b) => a[1] - b[1]);   // draw top -> bottom
     const n = pts.length, head = Math.floor(Math.min(1, t / 0.5) * n), fade = t > 0.5 ? (t - 0.5) / 0.5 : 0;
     const tail = Math.max(4, Math.floor(n * 0.6));
     for (let k = 0; k < head && k < n; k++) {
@@ -39,7 +39,7 @@
   function sparks(g, t, col, ch) {
     if (t < 0.4 || t > 0.85) return;
     const r = 1 + Math.floor((t - 0.4) * 6);
-    for (const [dx, dy] of [[-2, -1], [2, -1], [-2, 1], [2, 1], [-r * 2, 0], [r * 2, 0], [0, -r], [0, r]]) put(g.cx + dx, g.cy + dy, ch || '*', col);
+    for (const [dx, dy] of [[-2, -1], [2, -1], [-2, 1], [2, 1], [-r * 2, 0], [r * 2, 0], [0, -r], [0, r]]) put(g.cx + dx, g.cy + dy, ch || '✦', col);
   }
 
   const WHITE = ['#ffffff', '#fff2b0', '#a08a60'];
@@ -65,7 +65,7 @@
     if (t > 0.35) {
       for (let k = 0; k < 9; k++) {
         const x = g.cx - 6 + Math.floor(U.hash(k, 3) * 13), rise = Math.floor((t - 0.35) * 8 * (0.5 + U.hash(k, 5)));
-        put(x, g.bottom - rise, U.hash(k, 9) < 0.5 ? '^' : '*', U.mix('#ffdd66', '#c03010', Math.min(1, rise / 6)));
+        put(x, g.bottom - rise, U.hash(k, 9) < 0.5 ? '▴' : '•', U.mix('#ffdd66', '#c03010', Math.min(1, rise / 6)));
       }
     }
   } };
@@ -73,13 +73,13 @@
     // a spinning arc sweeping across every foe
     const xs = ctx.targets.length ? ctx.targets : [{ cx: 30, cy: 6 }];
     const y = Math.round(xs.reduce((a, g) => a + g.cy, 0) / xs.length);
-    const front = 60 - Math.floor(t * 62);
+    const front = X1 - Math.floor(t * (V.w + 2));
     for (let x = front; x < front + 14; x++) {
       const age = x - front;
       const col = age < 2 ? '#ffffff' : age < 7 ? '#fff2b0' : '#8a7a5a';
-      put(x, y, age % 3 === 0 ? '=' : '-', col);
-      put(x, y - 1 - (age % 2), age < 4 ? '~' : '.', col);
-      put(x, y + 1 + (age % 2), age < 4 ? '~' : '.', col);
+      put(x, y, age % 3 === 0 ? '═' : '─', col);
+      put(x, y - 1 - (age % 2), age < 4 ? '∿' : '·', col);
+      put(x, y + 1 + (age % 2), age < 4 ? '∿' : '·', col);
     }
     for (const g of ctx.targets) if (front <= g.cx && front > g.cx - 10) sparks(g, 0.5, '#ffffff', '+');
   } };
@@ -91,38 +91,41 @@
     const g = ctx.target;
     for (let k = 0; k < 6; k++) {
       const x = g.cx - 4 + Math.floor(U.hash(k, 11) * 9), rise = Math.floor(t * 4 * (0.6 + U.hash(k, 12)));
-      put(x, g.bottom - rise, U.hash(k, 13) < 0.5 ? '^' : '*', U.mix('#ffdd66', '#c03010', t));
+      put(x, g.bottom - rise, U.hash(k, 13) < 0.5 ? '▴' : '•', U.mix('#ffdd66', '#c03010', t));
     }
   } };
   S.frozen = { dur: 300, draw(t, ctx) {
     const g = ctx.target;
     for (let k = 0; k < 10; k++) {
       if (U.hash(k, Math.floor(t * 6)) < 0.5) continue;
-      put(g.x0 - 1 + Math.floor(U.hash(k, 21) * (g.x1 - g.x0 + 3)), g.top + Math.floor(U.hash(k, 22) * (g.bottom - g.top + 1)), '*', '#bfefff');
+      put(g.x0 - 1 + Math.floor(U.hash(k, 21) * (g.x1 - g.x0 + 3)), g.top + Math.floor(U.hash(k, 22) * (g.bottom - g.top + 1)), '❆', '#bfefff');
     }
   } };
 
   /* ---------- you, in the side panel ---------- */
+  const SB = U.L.SIDE;
   S.item = { dur: 340, draw(t) {
-    for (let k = 0; k < 10; k++) {
-      const x = 64 + Math.floor(U.hash(k, 31) * 33), y = 8 - Math.floor(t * 6 * (0.5 + U.hash(k, 32)));
-      if (y >= 2) U.put(x, y, '+', U.mix('#9fffb0', '#2a6a3a', t));
+    for (let k = 0; k < 14; k++) {
+      const x = SB.x + 2 + Math.floor(U.hash(k, 31) * (SB.w - 4)), y = 8 - Math.floor(t * 6 * (0.5 + U.hash(k, 32)));
+      if (y >= 2) U.put(x, y, k % 3 ? '+' : '✦', U.mix('#9fffb0', '#2a6a3a', t));
     }
   } };
   S.defend = { dur: 360, draw(t) {
-    const art = [' .----. ', '|  ##  |', '|  ##  |', ' \\    / ', "  '--'  "];
-    const col = U.mix('#9ff8ff', '#2a5a6a', Math.max(0, t - 0.5) * 2);
-    art.forEach((ln, j) => U.text(76, 12 + j, ln, col));
+    const art = ['╭──────╮', '│  ▓▓  │', '│  ▓▓  │', '╰╮    ╭╯', ' ╰────╯ '];
+    const col = U.mix('#9ff8ff', '#2a5a6a', Math.max(0, t - 0.5) * 2), w = U.SIDE.weapon;
+    art.forEach((ln, j) => U.text(w.cx - 4, w.bottom - 4 + j, ln, col));
   } };
   S.terror = { dur: 420, draw(t) {
-    for (let y = 15; y <= 20; y++) for (let x = 1; x <= 60; x++) {
-      if (U.hash(x, y, Math.floor(t * 8)) < 0.12) U.put(x, y, '~', U.mix('#d08bff', '#3a2a4a', t));
+    const Z = U.ZONE;
+    for (let y = Z.y0; y <= Z.y1; y++) for (let x = Z.x0; x <= Z.x1; x++) {
+      if (U.hash(x, y, Math.floor(t * 8)) < 0.12) U.put(x, y, '∿', U.mix('#d08bff', '#3a2a4a', t));
     }
   } };
   S.flee = { dur: 300, draw(t) {
-    for (let k = 0; k < 12; k++) {
-      const x = 40 + Math.floor(t * 20) + Math.floor(U.hash(k, 41) * 10), y = 15 + Math.floor(U.hash(k, 42) * 6);
-      put(x, y, U.hash(k, 43) < 0.5 ? '.' : ':', '#8a8a96');
+    const Z = U.ZONE;
+    for (let k = 0; k < 14; k++) {
+      const x = Z.x0 + 36 + Math.floor(t * 24) + Math.floor(U.hash(k, 41) * 10), y = Z.y0 + Math.floor(U.hash(k, 42) * (Z.y1 - Z.y0 + 1));
+      put(x, y, U.hash(k, 43) < 0.5 ? '·' : '∴', '#8a8a96');
     }
   } };
 })();

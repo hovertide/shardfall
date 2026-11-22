@@ -33,7 +33,7 @@
   };
 
   U.drawCreate = function () {
-    const x = 15, y = 3, w = 70, h = 27, cr = ui.create;
+    const w = 74, h = 27, x = Math.floor((U.COLS - w) / 2), y = 6, cr = ui.create;
     const used = D.stats.reduce((t, st) => t + cr.alloc[st.k], 0), left = R.startPoints - used;
     U.box(x, y, w, h, '{y}A new wanderer{/}', { bg: U.MODAL_BG });
     U.text(x + 3, y + 2, 'Who were you, before the sky cracked?', U.FG);
@@ -46,7 +46,7 @@
       const yy = y + 8 + k * 2, sel = cr.sel === k;
       U.area(x + 2, yy, w - 4, 2, U.region('cr:row:' + k, () => (cr.sel = k)));
       if (sel) U.fillBg(x + 2, yy, w - 4, 2, U.SEL_BG);
-      U.text(x + 3, yy, sel ? '>' : ' ', U.C.y);
+      U.text(x + 3, yy, sel ? '►' : ' ', U.C.y);
       U.text(x + 5, yy, st.name, st.color);
       U.button(x + 16, yy, '{d}[-]{/}', 'cr:-:' + k, () => { cr.sel = k; U.adjustStat(k, -1); });
       U.text(x + 20, yy, String(R.baseStat + cr.alloc[st.k]).padStart(3), U.C.w);
@@ -63,6 +63,6 @@
     if (ui.saveInfo) U.mtext(x + 3, y + 22, `{o}Starting will overwrite your saved game ${ui.saveInfo}.{/}`);
     U.button(x + 3, y + 24, '{y}[Enter]{/} Begin', 'cr:go', U.beginGame);
     U.button(x + 22, y + 24, '{y}[Esc]{/} Back', 'cr:back', () => (ui.screen = 'title'));
-    U.mtext(x + 38, y + 24, '{d}Up/Down pick - Left/Right adjust{/}');
+    U.mtext(x + 38, y + 24, '{d}↑↓ pick · ←→ adjust{/}');
   };
 })();

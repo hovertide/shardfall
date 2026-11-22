@@ -67,15 +67,11 @@
   }
 
   function overlayKey(k) {
+    if (ui.overlay === 'inv') return U.invKey(k);
     const n = parseInt(k, 10);
-    const closeKey = { inv: 'i', char: 'c', quests: 'q', outfit: 'o', help: '?', journal: 'j' }[ui.overlay];
+    const closeKey = { char: 'c', quests: 'q', outfit: 'o', help: '?', journal: 'j' }[ui.overlay];
     if (k === 'Escape' || k === closeKey) { ui.overlay = null; return true; }
     switch (ui.overlay) {
-      case 'inv': {
-        const inv = Engine.inventory(ui.s);
-        if (n >= 1 && n <= inv.length) { U.doAction({ type: 'use', id: inv[n - 1].id }); return true; }
-        return false;
-      }
       case 'char':
         if (n >= 1 && n <= D.stats.length) { U.doAction({ type: 'alloc', stat: D.stats[n - 1].k }); return true; }
         return false;
@@ -106,11 +102,11 @@
     }
     if (k === 'Escape' || k === '0' || k === 'Backspace') { ui.cmenu = 'main'; return true; }
     const list = U.combatList();
-    if (n >= 1 && n <= Math.min(5, list.length)) { list[n - 1].fn(); return true; }
+    if (n >= 1 && n <= Math.min(7, list.length)) { list[n - 1].fn(); return true; }
     return false;
   }
 
-  function gameKey(k) {
+  function gameKey(k, code) {
     const s = ui.s;
     if (k === 'PageUp') { ui.logScroll += 4; return true; }
     if (k === 'PageDown') { ui.logScroll = Math.max(0, ui.logScroll - 4); return true; }
@@ -118,6 +114,8 @@
     const n = parseInt(k, 10);
     switch (s.scene) {
       case 'explore':
+        // top-row number keys use the hotbar; numpad digits (and letters/arrows) move
+        if (code && code.startsWith('Digit') && n >= 1 && n <= 8) { U.itemAction(Engine.bag(s)[n - 1]); return true; }
         if (MOVE[k]) { ui.walk = []; U.doAction({ type: 'move', dx: MOVE[k][0], dy: MOVE[k][1] }); return true; }
         if (k === 'i') U.openOverlay('inv');
         else if (k === 'c') U.openOverlay('char');
@@ -168,7 +166,7 @@
     if (ui.screen === 'game' && U.anim.busy()) { U.anim.skip(); used = true; }
     else if (ui.screen === 'title') used = titleKey(k);
     else if (ui.screen === 'create') used = createKey(e);
-    else used = gameKey(k);
+    else used = gameKey(k, e.code);
     if (used) { e.preventDefault(); U.render(); }
   });
 
@@ -185,7 +183,7 @@
     const moved = !ui.hcell || !c || c.x !== ui.hcell.x || c.y !== ui.hcell.y;
     const old = ui.hover;
     ui.hcell = c;
-    if (key !== old || (key === 'map' && moved)) { ui.hover = key; U.render(); }
+    if (key !== old || (moved && (key === 'map' || ui.overlay === 'inv'))) { ui.hover = key; U.render(); }
   });
   screen.addEventListener('mouseleave', () => { ui.hover = null; ui.hcell = null; U.render(); });
   screen.addEventListener('click', (e) => {
@@ -194,13 +192,24 @@
     if (ui.screen === 'game' && U.anim.busy()) { U.anim.skip(); return; }
     const r = U.rg[c.y * U.COLS + c.x];
     // while the strike bar is up, a click anywhere on the combat panel swings
-    if (ui.timing && c.x < 62 && c.y < 22 && !(r >= 0 && U.regions[r].key === 'tm:cancel')) { U.resolveTiming(); return; }
+    const M = U.L.MAP;
+    if (ui.timing && c.x < M.x + M.w && c.y < M.y + M.h && !(r >= 0 && U.regions[r].key === 'tm:cancel')) { U.resolveTiming(); return; }
     if (r >= 0) { U.regions[r].fn(c.x, c.y); U.render(); }
+  });
+  // right-click: a region's quick action (use / equip), if it has one
+  screen.addEventListener('contextmenu', (e) => {
+    const c = cellAt(e);
+    if (!c || ui.screen !== 'game') return;
+    e.preventDefault();
+    if (U.anim.busy()) { U.anim.skip(); return; }
+    const r = U.rg[c.y * U.COLS + c.x];
+    if (r >= 0 && U.regions[r].alt) { U.regions[r].alt(c.x, c.y); U.render(); }
   });
   screen.addEventListener('wheel', (e) => {
     if (ui.screen !== 'game') return;
     const c = cellAt(e);
-    if (!c || c.y < 22 || c.y > 32) return;
+    const L = U.L.LOG;
+    if (!c || c.y < L.y || c.y >= L.y + L.h || c.x >= L.x + L.w) return;
     e.preventDefault();
     ui.logScroll = Math.max(0, ui.logScroll + (e.deltaY < 0 ? 2 : -2));
     U.render();

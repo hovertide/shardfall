@@ -10,14 +10,12 @@
     ['Save game', () => { U.saveGame(); Engine.note(ui.s, '{d}Game saved.{/}'); ui.overlay = null; }],
     [`Timed strikes     ${onOff(U.settings.timed)}`, toggle('timed')],
     [`Fast animations   ${onOff(U.settings.fast)}`, toggle('fast')],
-    [`Strict ASCII      ${onOff(U.settings.ascii)}`, toggle('ascii')],
     ['Quit to title', U.quitToTitle],
   ];
 
   U.drawMenu = function () {
-    const items = U.menuItems(), x = 14, y = 3, w = 34, h = items.length * 2 + 5;
+    const items = U.menuItems(), w = 36, h = items.length * 2 + 3, x = U.L.MAP.x + Math.floor((U.L.MAP.w - w) / 2), y = 4;
     U.box(x, y, w, h, 'Menu', { bg: U.MODAL_BG });
     items.forEach(([label, fn], k) => U.button(x + 2, y + 2 + k * 2, `{y}[${k + 1}]{/} ${label}`, 'menu:' + k, fn, { w: w - 4 }));
-    U.mtext(x + 2, y + h - 2, '{d}Strict ASCII swaps frame lines too{/}');
   };
 })();

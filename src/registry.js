@@ -17,7 +17,7 @@ var SF = (function () {
     'tiles', 'elements', 'regions', 'maps', 'enemies', 'moves', 'weapons', 'skills', 'spells',
     'items', 'shops', 'npcs', 'dialogues', 'quests', 'sprites', 'cosmetics',
   ];
-  const SINGLETONS = ['rules', 'stats', 'rarity', 'pity'];
+  const SINGLETONS = ['rules', 'stats', 'rarity', 'pity', 'looks'];
 
   const data = {};
   for (const k of KINDS) data[k] = {};
@@ -48,6 +48,7 @@ var SF = (function () {
     const indents = frames.flat().filter((l) => l.trim()).map((l) => l.match(/^ */)[0].length);
     const cut = indents.length ? Math.min(...indents) : 0;
     sp.frames = frames.map((f) => f.map((l) => l.slice(cut)));
+    sp.frames = sp.frames.map((f) => f.map((l) => [...l]));                 // arrays of characters (Unicode-safe)
     sp.w = Math.max(0, ...sp.frames.flat().map((l) => l.length));
     sp.h = Math.max(0, ...sp.frames.map((f) => f.length));
     if (sp.bands && cut) sp.bands = sp.bands.map(([a, b, c]) => [a - cut, b - cut, c]);

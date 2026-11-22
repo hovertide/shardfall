@@ -15,6 +15,7 @@
     screen: 'title', overlay: null, hover: null, hcell: null, titleHelp: false, msg: null, saveInfo: null,
     cmenu: 'main', target: 0, dsel: 0, shopTab: 'buy', outfitRow: 0, logScroll: 0, newFrom: 0,
     jTab: 'beasts', jSel: 0,      // journal
+    held: null, invSel: 0,         // inventory: slot being carried, keyboard cursor
     walk: [], walkTimer: null,
     create: null,
     timing: null,                  // the strike bar while it's up
@@ -151,6 +152,7 @@
   U.openOverlay = function (name) {
     if (!U.overlayAllowed(name) || U.anim.busy()) return;
     ui.overlay = ui.overlay === name ? null : name;
+    ui.held = null;
     if (ui.overlay === 'journal') {   // start on the first creature you've met
       const list = Engine.journal(ui.s), cur = list[ui.jSel];
       if (!cur || !cur.known) ui.jSel = Math.max(0, list.findIndex((e) => e.known));

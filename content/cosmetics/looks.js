@@ -1,19 +1,20 @@
 'use strict';
 /* =====================================================================
    Cosmetics from the Shrine of Echoes. r = rarity (0 Common .. 3
-   Legendary), def = owned from the start. Glyphs are plain ASCII.
+   Legendary), def = owned from the start. Any Unicode but emoji.
    ===================================================================== */
 SF.define('cosmetics', {
   // --- glyphs: your marker on the map ---
   g_at:     { type: 'glyph', name: 'Classic', val: '@', r: 0, def: true },
-  g_quest:  { type: 'glyph', name: 'Quester', val: 'Q', r: 0 },
-  g_hour:   { type: 'glyph', name: 'Hourglass', val: '8', r: 0 },
-  g_mark:   { type: 'glyph', name: 'Marked', val: 'X', r: 1 },
-  g_hollow: { type: 'glyph', name: 'Hollow', val: '0', r: 1 },
-  g_ward:   { type: 'glyph', name: 'Warden', val: 'G', r: 1 },
-  g_riddle: { type: 'glyph', name: 'Riddle', val: '?', r: 2 },
-  g_crown:  { type: 'glyph', name: 'Monarch', val: 'M', r: 2 },
-  g_veil:   { type: 'glyph', name: 'Veilborn', val: 'V', r: 3 },
+  g_smile:  { type: 'glyph', name: 'Grin', val: '☻', r: 0 },
+  g_para:   { type: 'glyph', name: 'Pilcrow', val: '¶', r: 0 },
+  g_amp:    { type: 'glyph', name: 'Ampersand', val: '&', r: 0 },
+  g_theta:  { type: 'glyph', name: 'Theta', val: 'Θ', r: 1 },
+  g_spade:  { type: 'glyph', name: 'Spade', val: '♠', r: 1 },
+  g_heart:  { type: 'glyph', name: 'Heart', val: '♥', r: 1 },
+  g_sun:    { type: 'glyph', name: 'Sunburst', val: '☼', r: 2 },
+  g_omega:  { type: 'glyph', name: 'Omega', val: 'Ω', r: 2 },
+  g_zhe:    { type: 'glyph', name: 'Starfall', val: 'Ж', r: 3 },
 
   // --- colors ---
   c_white:  { type: 'color', name: 'Bone White', val: '#f0f0f0', r: 0, def: true },

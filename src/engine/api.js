@@ -21,6 +21,7 @@
      pull     {n: 1 | 10}               shrine
      leave                              dialog, shop, shrine
      respawn                            gameover
+     arrange  {from, to}                any but gameover   swap two bag slots
 
    FX (animation hints, each has n = log length when it happened):
      start act ehit eheal phit hhit emove dodge kill burn freeze frozen
@@ -47,6 +48,7 @@ var Engine = (function () {
     sell:     [['shop'], E.sell],
     pull:     [['shrine'], E.pull],
     leave:    [['dialog', 'shop', 'shrine'], E.leave],
+    arrange:  [['explore', 'shop', 'shrine', 'dialog', 'combat'], E.arrange],
     respawn:  [['gameover'], E.respawn],
   };
 
@@ -57,6 +59,7 @@ var Engine = (function () {
     if (!h) E.fail('Unknown action.');
     else if (!h[0].includes(s.scene)) { E.OUT.ok = false; E.OUT.msg = 'wrong scene'; }
     else h[1](s, a);
+    E.syncBag(s.p);
     const out = E.OUT;
     E.OUT = null;
     E.CUR = null;
@@ -74,6 +77,7 @@ var Engine = (function () {
     // menus
     dialogView: E.dialogView, questLog: E.questLog, abilities: E.abilities, inventory: E.inventory,
     shopList: E.shopList, sellPrice: E.sellPrice, journal: E.journal,
+    bag: (s) => { E.syncBag(s.p); return s.p.bag.map((k) => E.slotInfo(s, k)); }, BAG_SIZE: E.BAG_SIZE,
     intent: (s, e) => E.intentInfo(s, e),
   };
 })();

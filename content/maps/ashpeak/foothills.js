@@ -32,7 +32,7 @@ SF.define('maps', {
     ],
     legend: {
       s: { go: 'village:n' },
-      U: { go: 'switchbacks:D', glyph: '<' },    // the trail climbs higher
+      U: { go: 'switchbacks:D', dir: 'up' },    // the trail climbs higher
       C: { chest: { gold: [15, 30], item: 'antidote', count: 2 } },
       P: { sign: '{c}ASHPEAK.{/} Steep slopes ({y}/{/}) take stamina to climb. Ledges ({y}_{/}) can only be hopped down.' },
     },

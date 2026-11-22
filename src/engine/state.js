@@ -38,13 +38,14 @@
     const d = E.derived(p);
     p.hp = d.maxHp; p.st = d.maxSt; p.sp = d.maxSp;
     p.visited[R.start.map] = 1;
+    E.syncBag(p);
     const s = { v: SAVE_VERSION, seed, rng: seed | 0, scene: 'explore', p,
       world: { gone: {}, used: {}, seen: {} }, combat: null, dialog: null, shop: null, dead: null, log: [] };
     E.invalidateFov();
     E.reveal(s);
     E.log(s, '{d}Three nights ago, the sky cracked like ice.{/}');
     E.log(s, `You wake beside the fountain of {y}Emberhollow{/}, ${p.name}. You remember your name, and nothing else.`);
-    E.log(s, 'Elder Maren ({y}&{/}) is waiting nearby. Walk into people to talk to them.');
+    E.log(s, 'Elder Maren ({y}☺{/}) is waiting nearby. Walk into people to talk to them.');
     return s;
   };
 
@@ -64,6 +65,7 @@
     p.weapons = (p.weapons || []).filter((w) => D.weapons[w]);
     if (!p.weapons.length) p.weapons = [R.start.weapon];
     if (s.scene === 'combat' && !s.combat) s.scene = 'explore';
+    E.syncBag(p);
     E.invalidateFov();
     E.reveal(s);
     return s;

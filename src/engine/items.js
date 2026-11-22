@@ -64,9 +64,54 @@
     const p = s.p, w = D.weapons[a.id];
     if (!w || !p.weapons.includes(a.id)) return E.fail("You don't own that weapon.");
     if (p.weapon === a.id) return E.fail(`${w.name} is already equipped.`);
+    const slot = (p.bag || []).indexOf('w:' + a.id);
+    if (slot >= 0) p.bag[slot] = 'w:' + p.weapon;   // the old weapon takes the new one's slot
     p.weapon = a.id;
     E.log(s, `You equip the {w}${w.name}{/}.`);
     return true;
+  };
+
+  /* ---------- The bag: slots for the inventory screen ----------
+     p.bag is an array of slots holding an item id ('hp_potion') or an
+     unequipped weapon ('w:steel_sword'). Counts still live in p.inv; the
+     bag only remembers WHERE things sit, so it is re-synced after every
+     action: new things go into the first free slot, used-up things leave. */
+  E.BAG_SIZE = 32;
+  E.syncBag = function (p) {
+    if (!Array.isArray(p.bag)) p.bag = [];
+    while (p.bag.length < E.BAG_SIZE) p.bag.push(null);
+    const want = [];
+    for (const id of Object.keys(D.items)) if (p.inv[id] > 0) want.push(id);
+    for (const w of p.weapons) if (w !== p.weapon) want.push('w:' + w);
+    const keep = new Set(want);
+    p.bag = p.bag.map((k) => (k && keep.has(k) ? k : null));
+    const have = new Set(p.bag.filter(Boolean));
+    for (const k of want) {
+      if (have.has(k)) continue;
+      let i = p.bag.indexOf(null);
+      if (i < 0) { p.bag.push(null); i = p.bag.length - 1; }
+      p.bag[i] = k;
+    }
+  };
+
+  // Swap two slots (moving onto an empty slot just moves).
+  E.arrange = function (s, a) {
+    const b = s.p.bag, from = a.from | 0, to = a.to | 0;
+    if (!b || from < 0 || to < 0 || from >= b.length || to >= b.length || from === to) return E.fail(null);
+    [b[from], b[to]] = [b[to], b[from]];
+    return true;
+  };
+
+  // What sits in a bag slot, for the UI.
+  E.slotInfo = function (s, k) {
+    if (!k) return null;
+    const p = s.p;
+    if (k.startsWith('w:')) {
+      const id = k.slice(2), w = D.weapons[id];
+      return w ? { key: k, kind: 'weapon', id, name: w.name, desc: w.desc, count: 1, icon: w.icon || 'icon_' + id, def: w } : null;
+    }
+    const it = D.items[k];
+    return it ? { key: k, kind: 'item', id: k, name: it.name, desc: it.desc, count: p.inv[k] || 0, icon: it.icon || 'icon_' + k, def: it } : null;
   };
 
   /* ---------- Shops ---------- */
@@ -110,8 +155,11 @@
     return true;
   };
 
-  E.inventory = (s) => Object.keys(D.items).filter((id) => s.p.inv[id] > 0)
-    .map((id) => Object.assign({ id, count: s.p.inv[id] }, D.items[id]));
+  // Usable items, in the order they sit in the bag.
+  E.inventory = function (s) {
+    E.syncBag(s.p);
+    return s.p.bag.filter((k) => k && !k.startsWith('w:')).map((id) => Object.assign({ id, count: s.p.inv[id] }, D.items[id]));
+  };
 
   E.shopList = function (s) {
     const p = s.p, sh = D.shops[s.shop];

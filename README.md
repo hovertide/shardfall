@@ -1,6 +1,6 @@
 # SHARDFALL
 
-An ASCII text RPG that runs in the browser. Double-click `index.html` to play. No install, no server.
+A text-mode RPG that runs in the browser: everything on screen is characters (any Unicode, never emoji). Double-click `index.html` to play. No install, no server.
 
 ```
 node tools/check.js    # checks all content + fuzz-tests the engine (run after editing anything)
@@ -20,6 +20,7 @@ content/              DATA ONLY. Each file calls SF.define(kind, {...}).
   rules.js            pacing: XP curve, stat points per level, anti-grind, economy, combat feel
   stats.js            the 5 stats            elements.js   fire / frost / storm / spirit / phys
   tiles.js            terrain glyphs         regions.js    groups maps into altitude levels
+  looks.js            glyphs for map objects (shrine, chest, stairs, signs, ...)
   maps/<region>/      one file per map (rows + legend)
   enemies/            stats, moves, weaknesses, lore (one file per area)
   moves/              enemy moves, shared by any enemy
@@ -28,7 +29,7 @@ content/              DATA ONLY. Each file calls SF.define(kind, {...}).
   items/  shops/  npcs/
   story/chapter1/     PLACEHOLDER story: quests + dialogue (swap this folder out later)
   cosmetics/          Shrine of Echoes odds + glyphs, colors, titles, frames
-  sprites/            ALL ASCII ART: enemies/, weapons/, ui/ (logo, shrine)
+  sprites/            ALL ART: enemies/, weapons/, items.js (inventory icons), ui/ (logo, shrine)
 
 src/registry.js       creates the global SF namespace
 src/engine/           GAME RULES. No DOM, no Math.random (seeded RNG), JSON state. Server-ready.
@@ -39,15 +40,24 @@ src/engine/           GAME RULES. No DOM, no Math.random (seeded RNG), JSON stat
   items.js  dialog.js  shrine.js  state.js (new/save/load)  api.js (the Engine object)
 
 src/ui/               BROWSER ONLY. Drawing, animation, input.
-  screen.js           100x34 character grid, colors, widgets, Strict ASCII mode
+  screen.js           128x42 character grid + a half-size "fine" layer for tiny text, colors, widgets
   sprite.js           draws sprites (tints, idle frames, dissolve)
   anim.js             replays each combat round as a timeline of animations
   fx/                 strikes.js (your attacks)  spells.js  enemy.js (enemy moves)
-  scenes/             title, create, explore (map), side (character panel), combat, timing (strike bar), ...
-  overlays/           inventory, character, quests, journal, outfits, help, menu
+  scenes/             title, create, explore (map), side (character panel), pack (hotbar), combat, timing, ...
+  overlays/           inventory (drag-and-drop grid), character, quests, journal, outfits, help, menu
 
 tools/                check.js, sim.js, bundle.js, load.js (loads the engine in Node)
 ```
+
+## Characters and the screen
+- Any Unicode is fine: box drawing, blocks, arrows, symbols. **No emoji.** `check.js` fails on emoji
+  anywhere, and the screen forces text presentation (U+FE0E + `font-variant-emoji: text`) in case one
+  slips through, so a heart stays a plain-text heart.
+- The screen is 128x42 cells. On top of it sits a fine layer at half size (256x84) for small print:
+  `U.small(x, y, text, color)` takes main-cell coordinates and accepts .5 (`y + 0.5` = the lower half of
+  a row). `U.msmall` takes `{y}color tags{/}`; `U.wrap(text, w * 2)` + `U.drawSmallLine` wraps tiny text.
+  Whatever is drawn last in a cell wins, normal or small.
 
 Why a manifest instead of `import`: browsers block ES modules on `file://`, and keeping
 "just double-click index.html" was worth one list of filenames.
@@ -68,7 +78,7 @@ Why a manifest instead of `import`: browsers block ES modules on `file://`, and 
      },
    });
    ```
-2. **Art** in `content/sprites/enemies/<area>.js` (same id). Paste ASCII between backticks, no escaping needed:
+2. **Art** in `content/sprites/enemies/<area>.js` (same id). Paste the art between backticks, no escaping needed:
    ```js
    SF.define('sprites', {
      mossback: {
@@ -81,7 +91,8 @@ Why a manifest instead of `import`: browsers block ES modules on `file://`, and 
      },
    });
    ```
-   Keep group enemies <= 19 wide and <= 8 tall (solo/bosses: up to ~50 x 9).
+   Keep it <= 10 tall. Width: <= 20 for anything that can show up three at a time, <= 30 in pairs,
+   up to ~60 for `solo: true` enemies and bosses.
 3. **Put it somewhere**: add `['mossback', 3]` to a map's `enc` list.
 4. Run `node tools/check.js`.
 
@@ -97,7 +108,7 @@ A `charge` move winds up for one turn, then does `then: 'otherMove'` next turn.
    ```js
    legend: {
      a: { go: 'woods:a' },                   // exit: lands next to the 'a' in the woods map
-     U: { go: 'ridge:D', glyph: '<' },       // stairs up (use '>' for down)
+     U: { go: 'ridge:D', dir: 'up' },        // stairs up (dir: 'down' for down); drawn as arrows
      C: { chest: { gold: [20, 40], item: 'hp_potion', weapon: 'x', learn: 'thunder' } },
      I: { stone: true },                     // standing stone: +1 stat point
      s: { secret: true },                    // cracked wall you can walk through
@@ -113,8 +124,18 @@ A `charge` move winds up for one turn, then does `then: 'otherMove'` next turn.
 
 ### Add a weapon
 `content/weapons/*.js` + a sprite with the same id in `content/sprites/weapons/` (points left, at the
-enemies; `bands` color blade/guard/grip by column). `timing` sets the strike bar's feel. Put it in a
-shop's `stock` or in a chest.
+enemies; `bands` color blade/guard/grip by column). `timing` sets the strike bar's feel. It also needs an
+inventory icon (see below). Put it in a shop's `stock` or in a chest.
+
+### Add an item
+`content/items/*.js` for what it does, plus an icon in `content/sprites/items.js` named `icon_<id>`
+(3 wide x 2 tall, drawn in the inventory cells; `color` for the base, `tint` per character):
+```js
+icon_hp_potion: { frames: [String.raw`
+╭┴╮
+╰♥╯`], color: '#c8c8d8', tint: { '♥': '#ff5060' } },
+```
+`check.js` fails if an item or weapon has no icon.
 
 ### Add a spell + its animation
 1. `content/spells/*.js`: `{ name, cost, lvl, target: 'one'|'all'|'chain'|'summon', base, scale, el, anim: 'myspell', cast, desc }`
@@ -133,5 +154,7 @@ shop's `stock` or in a chest.
 ## Controls
 WASD / arrows / numpad to move (y u b n diagonals) or click a tile. Walk into things to interact.
 Combat: 1-6, Tab to change target, Space to stop the strike bar or skip an animation.
-I items - C character - J journal - Q quests - O outfits - ? help - Esc menu (settings: timed strikes,
-fast animations, Strict ASCII).
+Pack (bottom right): click an item to use it, even mid-fight; 1-8 use the top row while exploring.
+Inventory (I): 32 slots. Click to pick up and put down (swaps), right-click or Enter to use or equip,
+drop a weapon on the Equipped slot to wield it; arrows + Space work too. The top row is the hotbar.
+C character - J journal - Q quests - O outfits - ? help - Esc menu (settings: timed strikes, fast animations).

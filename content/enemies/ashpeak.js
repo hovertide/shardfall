@@ -28,7 +28,7 @@ SF.define('enemies', {
   },
   stormcrow: {
     name: 'The Stormcrow', lvl: 7, hp: 320, atk: 19, def: 5, xp: 120, gold: [60, 80], color: '#7fb4ff',
-    boss: true, solo: true, glyph: 'V',
+    boss: true, solo: true, glyph: 'Ѵ',
     moves: [['talon', 3], ['gale', 2], ['soar', 1], ['thunderclap', 1]], weak: ['frost'], resist: ['storm'],
     intro: '{b}Thunder rolls. A shadow blots out the sun: THE STORMCROW DIVES!{/}',
     onDefeat: { flag: 'stormcrow', text: '{b}The Stormcrow crashes into the snow and breaks apart into wind and feathers. The way to the peak is open.{/}' },

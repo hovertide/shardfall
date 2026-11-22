@@ -13,14 +13,7 @@
 
   const KIND_ORDER = ['go', 'npc', 'shrine', 'chest', 'stone', 'vista', 'sign', 'boss', 'secret'];
   const BUMP = { npc: 1, shrine: 1, chest: 1, stone: 1, vista: 1, sign: 1, boss: 1 };
-  const LOOK = {   // how map objects look (a legend entry can override g / c)
-    shrine: { g: 'n', c: '#d08bff', name: '{m}Shrine of Echoes{/} {d}(spend shards){/}' },
-    chest: { g: '$', c: '#ffb020', name: '{y}Chest{/}' },
-    stone: { g: 'I', c: '#7fffe0', name: '{c}Standing stone{/} {d}(it hums){/}', glow: true },
-    vista: { g: '!', c: '#ffffff', name: '{w}Lookout{/}', glow: true },
-    sign: { g: 'P', c: '#c8a070', name: 'Signpost' },
-    secret: { g: '#', c: '#77707f', name: 'Cracked wall' },
-  };
+  const LOOK = D.looks;   // content/looks.js
   const VOID = { key: ' ', name: '', g: ' ', c: '#000000', block: true, opaque: true };
 
   /* ---------- Prepare maps once at load ---------- */
@@ -64,14 +57,14 @@
   /* ---------- What a map cell looks like (for the UI) ---------- */
   E.cell = function (s, M, x, y) {
     const t = E.terrain(M, x, y), o = E.objAt(s, M, x, y);
-    const base = { g: t.g, c: t.c, bg: t.bg || null, name: t.name, hint: t.hint || null, glow: !!t.glow };
+    const base = { g: t.g, c: t.c, bg: t.bg || null, name: t.name, hint: t.hint || null, glow: !!t.glow, vary: t.vary || 0, shimmer: !!t.shimmer };
     if (!o) return base;
     const used = s.world.used[o.key];
     switch (o.kind) {
       case 'go': {
         const T = MAPS[String(o.go).split(':')[0]];
-        const verb = o.glyph === '<' ? 'Way up to' : o.glyph === '>' ? 'Way down to' : 'Path to';
-        return { g: o.glyph || t.g, c: '#5fe0e0', bg: o.glyph ? null : '#0f2a2e', name: `{c}${verb} ${T ? T.def.name : '?'}{/}`, exit: true };
+        const G = LOOK.go, verb = o.dir === 'up' ? 'Way up to' : o.dir === 'down' ? 'Way down to' : 'Path to';
+        return { g: o.g || G[o.dir] || t.g, c: G.c, bg: o.dir ? null : G.bg, name: `{c}${verb} ${T ? T.def.name : '?'}{/}`, exit: true };
       }
       case 'npc': {
         const n = D.npcs[o.npc];
@@ -83,7 +76,7 @@
       }
       default: {
         const L = LOOK[o.kind];
-        const c = used ? '#4a5a58' : o.c || L.c;
+        const c = used ? L.spent || '#4a5a58' : o.c || L.c;
         const name = used ? `${o.kind === 'stone' ? 'Standing stone {d}(silent now){/}' : L.name}` : L.name;
         return { g: o.g || L.g, c, name, glow: !used && !!L.glow };
       }

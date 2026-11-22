@@ -6,7 +6,7 @@
   U.chipLabel = function (c) {
     const rc = D.rarity[c.r].color;
     if (c.type === 'glyph') return `{${rc}}${c.val} ${c.name}{/}`;
-    if (c.type === 'color') return `{${c.val}}#{/} {${rc}}${c.name}{/}`;
+    if (c.type === 'color') return `{${c.val}}■{/} {${rc}}${c.name}{/}`;
     if (c.type === 'frame') {
       const F = U.FRAMES[c.val.style] || U.FRAMES.single;
       return `{${c.val.color}}${F[0]}${F[4]}${F[1]}{/} {${rc}}${c.name}{/}`;
@@ -15,7 +15,7 @@
   };
 
   U.drawShrine = function (now) {
-    const s = ui.s, x = 2, y = 1, w = 58, h = 20, p = s.p;
+    const s = ui.s, M = U.L.MAP, x = M.x + 3, y = M.y + 2, w = M.w - 6, h = M.h - 4, p = s.p;
     U.box(x, y, w, h, '{m}Shrine of Echoes{/}', { bg: U.MODAL_BG });
     U.drawSprite('shrine', x + 9, y + 8, { color: '#d08bff' });
     U.mtext(x + 19, y + 2, `Spirit shards: {m}${p.shards}{/}`);
@@ -25,7 +25,7 @@
     U.button(x + 19, y + 7, '{y}[O]{/} Outfits', 'sh:out', () => U.openOverlay('outfit'));
     const total = D.rarity.reduce((t, r) => t + r.weight, 0);
     U.mcenter(x + w / 2, y + 9, D.rarity.map((r) => `{${r.color}}${r.name} ${Math.round((r.weight / total) * 100)}%{/}`).join('  '));
-    for (let k = 2; k < w - 2; k++) U.put(x + k, y + 10, '-', '#2c2c38');
+    for (let k = 2; k < w - 2; k++) U.put(x + k, y + 10, '─', '#2c2c38');
 
     if (ui.pull) {
       const shown = Math.min(ui.pull.results.length, Math.floor((now - ui.pull.t0) / 140) + 1);

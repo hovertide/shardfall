@@ -64,6 +64,10 @@
   }
   for (const [id, w] of Object.entries(D.weapons)) {
     if (!has('sprites', w.sprite || id)) bad(w, `weapon "${id}": no sprite "${w.sprite || id}"`);
+    if (!has('sprites', w.icon || 'icon_' + id)) bad(w, `weapon "${id}": no inventory icon "${w.icon || 'icon_' + id}"`);
+  }
+  for (const [id, it] of Object.entries(D.items)) {
+    if (!has('sprites', it.icon || 'icon_' + id)) bad(it, `item "${id}": no inventory icon "${it.icon || 'icon_' + id}"`);
   }
   for (const tbl of ['skills', 'spells']) {
     for (const [id, x] of Object.entries(D[tbl])) if (x.el && !has('elements', x.el)) bad(x, `${tbl} "${id}": unknown element "${x.el}"`);
@@ -96,7 +100,8 @@
     const frames = sp.frames || [sp.art];
     if (!frames[0]) { bad(sp, `sprite "${id}" has no art`); continue; }
     for (const f of frames) for (const ln of f) {
-      if (/[^\x20-\x7e]/.test(ln)) bad(sp, `sprite "${id}" uses a non-ASCII character: "${ln}"`);
+      const s = Array.isArray(ln) ? ln.join('') : ln;
+      if (/\p{Emoji_Presentation}|[\u{1F000}-\u{1FAFF}]/u.test(s)) bad(sp, `sprite "${id}" uses an emoji: "${s}"`);
     }
     if (sp.mask) {
       const m = sp.mask;

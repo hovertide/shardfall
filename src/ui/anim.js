@@ -241,14 +241,10 @@
   function callout(g, name, heavy, t) {
     if (!name || t > 0.95) return;
     const txt = heavy ? `${name}!` : name;
-    U.center(g.cx, 1, txt, heavy ? U.C.o : U.C.r, U.BANNER_BG);
+    U.center(g.cx, U.L.VIEW.y, txt, heavy ? U.C.o : U.C.r, U.BANNER_BG);
   }
   function banner(text, color, t) {
-    if (t > 0.97) return;
-    const tt = `   ${text}   `, x = 1 + Math.floor((60 - tt.length) / 2), y = 6;
-    U.text(x, y - 1, ' '.repeat(tt.length), U.FG, U.BANNER_BG);
-    U.text(x, y, tt, color, U.BANNER_BG);
-    U.text(x, y + 1, ' '.repeat(tt.length), U.FG, U.BANNER_BG);
+    if (t <= 0.97) U.bannerAt(text, color);
   }
   function bossBanner(key, t) {
     const e = D.enemies[key];

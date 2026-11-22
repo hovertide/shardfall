@@ -5,9 +5,10 @@
 
   const HELP = [
     ['{y}Move{/}', 'WASD, arrow keys or the numpad (y u b n for diagonals). Or click any explored tile to walk there.'],
-    ['{y}Interact{/}', 'Walk into people ({y}&{/}), chests ({y}${/}), signs ({y}P{/}) and the shrine ({m}n{/}). Glowing paths lead to new areas.'],
-    ['{y}Terrain{/}', 'Steep slopes ({y}/{/}) cost stamina to climb. Ledges ({y}_{/}) can only be hopped down. {c}<{/} climbs up, {c}>{/} goes down. Cracked walls may hide passages.'],
-    ['{y}Growth{/}', 'Each level gives 1 stat point. Standing stones ({c}I{/}) hidden in the world give more. New areas, lookouts ({w}!{/}) and first kills give bonus XP; weak foes give little.'],
+    ['{y}Interact{/}', 'Walk into people ({y}☺{/}), chests ({y}▣{/}), signs ({#c8a070}╤{/}) and the shrine ({m}Ω{/}). Glowing paths lead to new areas.'],
+    ['{y}Terrain{/}', 'Steep slopes ({y}╱{/}) cost stamina to climb. Ledges ({y}▁{/}) can only be hopped down. {c}⇑{/} climbs up, {c}⇓{/} goes down. Cracked walls may hide passages.'],
+    ['{y}Growth{/}', 'Each level gives 1 stat point. Standing stones ({c}Π{/}) hidden in the world give more. New areas, lookouts ({w}☼{/}) and first kills give bonus XP; weak foes give little.'],
+    ['{y}Items{/}', 'Click an item in the Pack (bottom right) to use it, even mid-fight. [1-8] use the hotbar while exploring. [I] opens the full inventory: click to pick up and place, right-click to use or equip.'],
     null,
     ['{y}Combat{/}', '[1] Attack  [2] Skills  [3] Spells  [4] Items  [5] Defend  [6] Flee. Tab or click to change target.'],
     ['{y}Intents{/}', 'Under each enemy is what it will do next turn. {o}!!{/} marks a heavy blow: Defend to take only 20% and riposte. {y}*{/} means it is winding up.'],
@@ -21,11 +22,11 @@
     ['{m}Willpower{/}', 'Keep fighting below 0 HP (Brink), deal more damage when badly hurt (Fury), resist sanity loss.'],
     ['{m}Sanity{/}', 'Dread attacks drain it. Under 30 you may freeze; at 0 you deal less damage. Tea, the hermit and the inn restore it.'],
     null,
-    ['{y}Keys{/}', '[I]tems [C]haracter [J]ournal [Q]uests [O]utfits [?]help [Esc]menu'],
+    ['{y}Keys{/}', '[I]nventory  [C]haracter  [J]ournal  [Q]uests  [O]utfits  [?] help  [Esc] menu  ·  PgUp/PgDn or the wheel scroll the log'],
   ];
 
   U.drawHelp = function () {
-    const x = 6, y = 0, w = 88, h = 33;
+    const w = 104, h = 40, x = Math.floor((U.COLS - w) / 2), y = 0;
     U.box(x, y, w, h, '{y}How to play{/}', { bg: U.MODAL_BG });
     let yy = y + 2;
     for (const e of HELP) {

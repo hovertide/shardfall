@@ -45,8 +45,8 @@ SF.define('maps', {
       '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^',
     ],
     legend: {
-      D: { go: 'foothills:U', glyph: '>' },
-      U: { go: 'ridge:D', glyph: '<' },
+      D: { go: 'foothills:U', dir: 'down' },
+      U: { go: 'ridge:D', dir: 'up' },
       C: { chest: { gold: [30, 50], item: 'st_tonic', count: 2 } },
       I: { stone: true },
       P: { sign: 'The trail zig-zags up the mountain. {d}Hop down a ledge to get back down fast.{/}' },

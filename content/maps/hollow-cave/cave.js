@@ -32,7 +32,7 @@ SF.define('maps', {
     ],
     legend: {
       b: { go: 'woods:b' },
-      D: { go: 'cave_depths:U', glyph: '>' },     // stairs down
+      D: { go: 'cave_depths:U', dir: 'down' },     // stairs down
       C: { chest: { gold: [40, 70], item: 'sp_draught' } },
       K: { chest: { gold: [30, 50], item: 'st_tonic' } },
     },

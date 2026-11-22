@@ -20,13 +20,13 @@
   };
 
   U.drawShop = function () {
-    const s = ui.s, x = 2, y = 0, w = 58, h = 22, p = s.p, sh = D.shops[s.shop];
+    const s = ui.s, M = U.L.MAP, x = M.x + 2, y = M.y + 1, w = M.w - 4, h = M.h - 2, p = s.p, sh = D.shops[s.shop];
     U.box(x, y, w, h, `{y}${sh ? sh.name : 'Shop'}{/}`, { bg: U.MODAL_BG });
     U.button(x + 2, y + 1, ui.shopTab === 'buy' ? '{y}[ BUY ]{/}' : '{d}[ buy ]{/}', 'shop:tbuy', () => (ui.shopTab = 'buy'));
     U.button(x + 11, y + 1, ui.shopTab === 'sell' ? '{y}[ SELL ]{/}' : '{d}[ sell ]{/}', 'shop:tsell', () => (ui.shopTab = 'sell'));
     const g = `{y}Gold ${p.gold}{/}`;
     U.mtext(x + w - 3 - U.plainLen(g), y + 1, g);
-    for (let k = 2; k < w - 2; k++) U.put(x + k, y + 2, '-', '#2c2c38');
+    for (let k = 2; k < w - 2; k++) U.put(x + k, y + 2, '─', '#2c2c38');
     const list = U.shopEntries();
     if (!list.length) U.text(x + 3, y + 4, 'You have nothing to sell.', U.DIM);
     list.slice(0, 9).forEach((e, k) => {
@@ -34,7 +34,9 @@
       U.button(x + 2, yy, e.label, key, e.fn, { w: w - 4 });
       U.area(x + 2, yy + 1, w - 4, 1, U.regions.length - 1);   // description line is clickable too
       if (U.hovered(key)) U.fillBg(x + 2, yy + 1, w - 4, 1, U.HOVER_BG);
-      U.mtext(x + 6, yy + 1, `{d}${e.desc}{/}`, U.FG, null, null, w - 9);
+      const dw = w - 9;
+      if (U.plainLen(e.desc) <= dw) U.mtext(x + 6, yy + 1, `{d}${e.desc}{/}`, U.FG, null, null, dw);
+      else U.wrap(`{d}${e.desc}{/}`, dw * 2).slice(0, 2).forEach((ln, i) => U.drawSmallLine(x + 6, yy + 1 + i / 2, ln));  // long text: two tiny lines
     });
     U.button(x + w - 14, y + h - 1, '{y}[Esc]{/} Leave', 'shop:leave', () => U.doAction({ type: 'leave' }));
   };

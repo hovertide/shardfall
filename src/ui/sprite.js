@@ -32,7 +32,7 @@
     const lines = opt.frame != null ? sp.frames[opt.frame % sp.frames.length] : U.spriteFrame(sp, opt.now, opt.speed);
     const w = sp.w, h = lines.length;
     const x0 = cx - Math.floor(w / 2) + (opt.dx || 0), y0 = bottom - h + 1 + (opt.dy || 0);
-    const base = opt.color || U.FG, tint = sp.tint || {}, bands = sp.bands || null, clip = opt.clip;
+    const base = opt.color || sp.color || U.FG, tint = sp.tint || {}, bands = sp.bands || null, clip = opt.clip;
     lines.forEach((ln, j) => {
       for (let i = 0; i < ln.length; i++) {
         const c = ln[i];

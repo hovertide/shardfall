@@ -9,7 +9,7 @@
    ===================================================================== */
 (function () {
   const U = SF.UI, ui = U.ui, D = SF.data;
-  const X = 0, Y = 0, W = 100, H = 33;
+  const X = 0, Y = 0, W = 128, H = 41;
 
   U.journalEntries = () => Engine.journal(ui.s);
 
@@ -25,19 +25,19 @@
   function drawBeasts(now) {
     const list = U.journalEntries(), known = list.filter((e) => e.known).length;
     U.mtext(X + W - 22, Y + 1, `{d}discovered{/} {y}${known}{/}{d}/${list.length}{/}`);
-    for (let k = 2; k < W - 2; k++) U.put(X + k, Y + 2, '-', '#2c2c38');
+    for (let k = 2; k < W - 2; k++) U.put(X + k, Y + 2, '─', '#2c2c38');
     if (ui.jSel >= list.length) ui.jSel = 0;
     // left: the list
     list.forEach((e, k) => {
       const yy = Y + 3 + k;
       if (yy > Y + H - 3) return;
-      const label = e.known ? `${U.pad(e.name, 17)}{d}${String(e.kills).padStart(4)}{/}` : '{d}???{/}';
-      U.button(X + 2, yy, `${ui.jSel === k ? '{y}>{/}' : ' '} ${label}`, 'jr:' + k, () => (ui.jSel = k),
-        { w: 25, bg: ui.jSel === k ? U.SEL_BG : null, color: e.known ? (e.boss ? '#ff8a8a' : U.FG) : U.DIM });
+      const label = e.known ? `${U.pad(e.name, 19)}{d}${String(e.kills).padStart(4)}{/}` : '{d}? ? ?{/}';
+      U.button(X + 2, yy, `${ui.jSel === k ? '{y}►{/}' : ' '} ${label}`, 'jr:' + k, () => (ui.jSel = k),
+        { w: 27, bg: ui.jSel === k ? U.SEL_BG : null, color: e.known ? (e.boss ? '#ff8a8a' : U.FG) : U.DIM });
     });
-    for (let yy = Y + 3; yy < Y + H - 1; yy++) U.put(X + 28, yy, '|', '#2c2c38');
+    for (let yy = Y + 3; yy < Y + H - 1; yy++) U.put(X + 30, yy, '│', '#2c2c38');
     // right: the entry
-    const e = list[ui.jSel], rx = X + 31, rw = W - 34;
+    const e = list[ui.jSel], rx = X + 33, rw = W - 36;
     if (!e || !e.known) {
       U.mtext(rx, Y + 4, '{d}You have not met this creature yet.{/}');
       U.wrap('{d}Explore further: new areas hold new beasts, and the first kill of each species is worth double XP.{/}', rw, U.FG)
@@ -45,9 +45,9 @@
       return;
     }
     U.mtext(rx, Y + 3, `{${e.color}}${e.name}{/}${e.boss ? '  {r}BOSS{/}' : ''}`);
-    U.mtext(rx, Y + 4, `{d}met ${e.seen} - defeated ${e.kills}${e.habitat.length ? ' - found in ' + e.habitat.join(', ') : ''}{/}`, U.FG, null, null, rw);
+    U.mtext(rx, Y + 4, `{d}met ${e.seen} · defeated ${e.kills}${e.habitat.length ? ' · found in ' + e.habitat.join(', ') : ''}{/}`, U.FG, null, null, rw);
     // the picture, in a frame
-    const sp = U.sprite(e.sprite), fw = Math.max(24, (sp ? sp.w : 10) + 4), fh = Math.max(11, (sp ? sp.h : 4) + 3);
+    const sp = U.sprite(e.sprite), fw = Math.max(30, (sp ? sp.w : 10) + 6), fh = Math.max(13, (sp ? sp.h : 4) + 4);
     U.box(rx, Y + 6, fw, fh, null, { color: '#2c2c38', style: 'single' });
     U.drawSprite(e.sprite, rx + Math.floor(fw / 2), Y + 6 + fh - 2, { color: e.color, now });
     // facts beside / below the picture
@@ -72,7 +72,7 @@
   function drawPlaces() {
     const places = Engine.places(ui.s), total = Object.keys(D.maps).length;
     U.mtext(X + W - 22, Y + 1, `{d}visited{/} {y}${places.length}{/}{d}/${total}{/}`);
-    for (let k = 2; k < W - 2; k++) U.put(X + k, Y + 2, '-', '#2c2c38');
+    for (let k = 2; k < W - 2; k++) U.put(X + k, Y + 2, '─', '#2c2c38');
     U.mtext(X + 3, Y + 3, `{d}${U.pad('Area', 26)}${U.pad('Danger', 12)}${U.pad('Altitude', 10)}${U.pad('Explored', 22)}${U.pad('Chests', 9)}Stones{/}`);
     let y = Y + 5, lastRegion = null;
     for (const pl of places.sort((a, b) => (a.region > b.region ? 1 : a.region < b.region ? -1 : b.z - a.z))) {

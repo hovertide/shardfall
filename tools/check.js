@@ -5,7 +5,7 @@
 
    1. every file in manifest.js exists, and no script is missing from it
    2. content cross-references (src/engine/validate.js)
-   3. no emoji or non-ASCII characters in content (art must be pure ASCII)
+   3. no emoji characters anywhere (any other Unicode is fine)
    4. every chest, stone, person and exit on every map can be reached
    5. fuzz: thousands of random actions in random games must never crash
    ===================================================================== */
@@ -39,16 +39,17 @@ ok(`${Object.keys(D.maps).length} maps, ${Object.keys(D.enemies).length} enemies
 
 /* 3. characters */
 console.log('Characters');
-const EMOJI = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/u;
+// Symbols that DEFAULT to emoji style (or live in the emoji planes) are banned. Others, like the
+// card suits, are fine: the renderer forces text style with U+FE0E.
+const EMOJI = /\p{Emoji_Presentation}|[\u{1F000}-\u{1FAFF}\u{FE0F}]/u;
 for (const f of listed) {
   if (!fs.existsSync(path.join(root, f))) continue;
   const txt = fs.readFileSync(path.join(root, f), 'utf8');
   txt.split('\n').forEach((line, i) => {
-    if (EMOJI.test(line)) err(`${f}:${i + 1} emoji-capable character: ${line.trim().slice(0, 60)}`);
-    else if (f.startsWith('content/') && /[^\x00-\x7e]/.test(line)) err(`${f}:${i + 1} non-ASCII character: ${line.trim().slice(0, 60)}`);
+    if (EMOJI.test(line)) err(`${f}:${i + 1} emoji character: ${line.trim().slice(0, 60)}`);
   });
 }
-ok('no emoji anywhere; content is pure ASCII');
+ok('no emoji anywhere');
 
 /* 4. reachability */
 console.log('Maps');
@@ -105,6 +106,8 @@ if (process.argv[2] !== 'quick') {
         const x = r();
         if (x < 0.03 && p.points) a = { type: 'alloc', stat: pick(STATS, r) };
         else if (x < 0.05) a = { type: 'use', id: pick(Object.keys(D.items), r) };
+        else if (x < 0.055) a = { type: 'arrange', from: Math.floor(r() * 32), to: Math.floor(r() * 32) };
+        else if (x < 0.058) a = { type: 'equip', id: pick(s.p.weapons, r) };
         else if (x < 0.06) {   // teleport around to cover every map
           const mk = pick(Object.keys(D.maps), r), M = E.MAPS[mk];
           const spots = Object.values(M.objs).filter((o) => o.kind === 'go');
@@ -143,6 +146,11 @@ if (process.argv[2] !== 'quick') {
         break;
       }
       if (step % 500 === 0) s = Engine.load(Engine.save(s));   // save/load round trip
+      const bagKeys = s.p.bag.filter(Boolean);
+      if (new Set(bagKeys).size !== bagKeys.length || bagKeys.includes('w:' + s.p.weapon)) {
+        err(`game ${g} step ${step}: bag out of sync ${JSON.stringify(s.p.bag)} weapon=${s.p.weapon}`);
+        break;
+      }
     }
   }
   ok(`${actions} actions, ${fights} fights, ${deaths} deaths, ${levels} level-ups, no crashes`);

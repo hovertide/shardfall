@@ -15,6 +15,7 @@ var SHARDFALL_MANIFEST = {
     'content/stats.js',
     'content/elements.js',
     'content/tiles.js',
+    'content/looks.js',
     'content/regions.js',
 
     'content/maps/emberhollow/village.js',
@@ -54,6 +55,7 @@ var SHARDFALL_MANIFEST = {
     'content/sprites/enemies/ruins.js',
     'content/sprites/weapons/blades.js',
     'content/sprites/ui/art.js',
+    'content/sprites/items.js',
   ],
 
   // Game rules. No DOM, no randomness outside the seeded RNG. api.js must be last.
@@ -85,6 +87,7 @@ var SHARDFALL_MANIFEST = {
     'src/ui/scenes/explore.js',
     'src/ui/scenes/side.js',
     'src/ui/scenes/log.js',
+    'src/ui/scenes/pack.js',
     'src/ui/scenes/combat.js',
     'src/ui/scenes/timing.js',
     'src/ui/scenes/dialog.js',

@@ -14,7 +14,7 @@ SF.define('dialogues', {
         choices: [{ t: "I'll help. What do you need?", do: ['accept:q1'], go: 'accept' }, { t: 'Who are you?', go: 'who' }, { t: 'Not now.' }] },
       who: { text: "\"Maren. I've kept Emberhollow's ember-well lit for sixty winters.\" She taps her temple. \"The shards hum. You hear them, don't you? That's why you woke here.\"",
         choices: [{ t: 'Tell me about the trouble.', go: 'intro' }, { t: 'Farewell.' }] },
-      accept: { text: "\"Cull four of the tainted beasts in the {c}Whispering Woods{/}, east of the village. Bram sells potions in the shop to the west.\"\n\"The {m}Shrine of Echoes{/} ({m}n{/}) to the south answers to spirit shards. And if you have legs for it, the goat trail north climbs {c}Ashpeak{/}. Old standing stones up there still hum with power.\"",
+      accept: { text: "\"Cull four of the tainted beasts in the {c}Whispering Woods{/}, east of the village. Bram sells potions in the shop to the west.\"\n\"The {m}Shrine of Echoes{/} ({m}Ω{/}) to the south answers to spirit shards. And if you have legs for it, the goat trail north climbs {c}Ashpeak{/}. Old standing stones up there still hum with power.\"",
         choices: [{ t: "I'm on it." }] },
       q1active: { text: "\"The woods still writhe. Cull the tainted beasts. %q1% so far.\"", choices: [{ t: 'On my way.' }] },
       q1ready: { text: "Maren studies the blood on your blade and nods slowly.\n\"Good. You fight like someone who's done this before, even if you don't remember it.\"",

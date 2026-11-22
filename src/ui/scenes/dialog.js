@@ -6,9 +6,9 @@
   U.drawDialog = function () {
     const v = Engine.dialogView(ui.s);
     if (!v) return;
-    const w = 56, x = 3, lines = U.wrap(v.text, w - 4, U.FG), nc = v.choices.length;
-    const textRows = Math.min(lines.length, 19 - nc);
-    const h = textRows + nc + 3, y = Math.max(0, Math.floor((22 - h) / 2));
+    const M = U.L.MAP, w = 60, x = M.x + 3, lines = U.wrap(v.text, w - 4, U.FG), nc = v.choices.length;
+    const textRows = Math.min(lines.length, M.h - 5 - nc);
+    const h = textRows + nc + 3, y = Math.max(0, Math.floor((M.h - h) / 2));
     U.box(x, y, w, h, `{y}${v.name}{/}`, { bg: U.MODAL_BG });
     for (let k = 0; k < textRows; k++) U.drawLine(x + 2, y + 1 + k, lines[k]);
     if (ui.dsel >= nc) ui.dsel = 0;

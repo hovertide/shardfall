@@ -9,7 +9,8 @@
   body { display: flex; align-items: center; justify-content: center; }
   #screen {
     margin: 0; color: #c8c8d0; font-size: 16px; line-height: 1.15; white-space: pre;
-    font-family: "Cascadia Mono", "DejaVu Sans Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    font-family: "Cascadia Mono", "DejaVu Sans Mono", Menlo, Consolas, "Liberation Mono",
+      "Segoe UI Symbol", "Noto Sans Symbols 2", "Noto Sans Symbols", monospace;
     user-select: none; -webkit-user-select: none; cursor: default; touch-action: manipulation;
   }
   #screen span[data-r] { cursor: pointer; }
@@ -39,7 +40,7 @@ var SF = (function () {
     'tiles', 'elements', 'regions', 'maps', 'enemies', 'moves', 'weapons', 'skills', 'spells',
     'items', 'shops', 'npcs', 'dialogues', 'quests', 'sprites', 'cosmetics',
   ];
-  const SINGLETONS = ['rules', 'stats', 'rarity', 'pity'];
+  const SINGLETONS = ['rules', 'stats', 'rarity', 'pity', 'looks'];
 
   const data = {};
   for (const k of KINDS) data[k] = {};
@@ -70,6 +71,7 @@ var SF = (function () {
     const indents = frames.flat().filter((l) => l.trim()).map((l) => l.match(/^ */)[0].length);
     const cut = indents.length ? Math.min(...indents) : 0;
     sp.frames = frames.map((f) => f.map((l) => l.slice(cut)));
+    sp.frames = sp.frames.map((f) => f.map((l) => [...l]));                 // arrays of characters (Unicode-safe)
     sp.w = Math.max(0, ...sp.frames.flat().map((l) => l.length));
     sp.h = Math.max(0, ...sp.frames.map((f) => f.length));
     if (sp.bands && cut) sp.bands = sp.bands.map(([a, b, c]) => [a - cut, b - cut, c]);
@@ -179,37 +181,56 @@ SF.define('elements', {
 SF._file("content/tiles.js");
 'use strict';
 /* =====================================================================
-   Terrain. Each key is the character used when drawing maps.
-     g       glyph shown on screen (pure ASCII)
-     c / bg  colors
-     block   can't walk onto it          opaque  blocks line of sight
+   Terrain. Each key is the character used when drawing maps (keep those
+   plain ASCII so maps stay easy to type); `g` is what's shown on screen
+   and can be any Unicode symbol EXCEPT emoji.
+     c / bg  colors              vary    random brightness per tile (texture)
+     block   can't walk onto it  opaque  blocks line of sight
      danger  encounter rate multiplier   climb   stamina cost to enter
      ledge   one-way: hop down (south) over it, can't climb back
      msg     message shown when you bump into it
    Special things (people, chests, stairs, exits) are NOT tiles: each
-   map places them with its own `legend`.
+   map places them with its own `legend`; their looks are in looks.js.
    ===================================================================== */
 SF.define('tiles', {
-  '#': { name: 'Stone wall', g: '#', c: '#5e5e72', block: true, opaque: true },
-  '.': { name: 'Path', g: '.', c: '#6e6e7c' },
-  ',': { name: 'Grass', g: ',', c: '#3f8f4a', danger: 0.6 },
-  '"': { name: 'Tall grass', g: '"', c: '#55b060', danger: 1, hint: 'beasts hide here' },
-  'T': { name: 'Pine', g: 'T', c: '#2e8e4e', block: true },
-  'Y': { name: 'Old tree', g: 'Y', c: '#8a7a4a', block: true },
-  '~': { name: 'Deep water', g: '~', c: '#3d72d6', bg: '#0c1730', block: true, msg: 'The water runs deep and cold.' },
-  'w': { name: 'Shallows', g: '~', c: '#6a9ae0', danger: 0.5 },
-  '=': { name: 'Bridge', g: '=', c: '#b08850' },
-  '+': { name: 'Door', g: '+', c: '#c09060' },
-  'o': { name: 'Fountain', g: 'o', c: '#7fb0d0', block: true },
-  '|': { name: 'Fence', g: '|', c: '#8a6a40', block: true },
-  '-': { name: 'Fence', g: '-', c: '#8a6a40', block: true },
-  '^': { name: 'Mountain rock', g: '^', c: '#8f8474', block: true, opaque: true, msg: 'Sheer rock. Far too steep to climb here.' },
-  ':': { name: 'Scree', g: ':', c: '#9a9080', danger: 0.7 },
-  '/': { name: 'Steep slope', g: '/', c: '#c8a870', climb: 3, hint: 'climbing costs stamina' },
-  '_': { name: 'Ledge', g: '_', c: '#d0b080', ledge: true, hint: 'hop down from above' },
-  '%': { name: 'Rubble', g: '%', c: '#6a6058', block: true },
-  '0': { name: 'Pillar', g: '0', c: '#8a8a9a', block: true, opaque: true },
-  'x': { name: 'Shard crystal', g: 'x', c: '#5fe0e0', block: true, glow: true },
+  '#': { name: 'Stone wall', g: '█', c: '#45455a', vary: 0.12, block: true, opaque: true },
+  '.': { name: 'Path', g: '·', c: '#74747f' },
+  ',': { name: 'Grass', g: ',', c: '#3f8f4a', vary: 0.2, danger: 0.6 },
+  '"': { name: 'Tall grass', g: 'ʬ', c: '#55b060', vary: 0.2, danger: 1, hint: 'beasts hide here' },
+  'T': { name: 'Pine', g: '♣', c: '#2e8e4e', vary: 0.15, block: true },
+  'Y': { name: 'Old tree', g: 'ϒ', c: '#8a7a4a', block: true },
+  '~': { name: 'Deep water', g: '≈', c: '#3d72d6', bg: '#0c1730', block: true, shimmer: true, msg: 'The water runs deep and cold.' },
+  'w': { name: 'Shallows', g: '∽', c: '#6a9ae0', shimmer: true, danger: 0.5 },
+  '=': { name: 'Bridge', g: '═', c: '#b08850' },
+  '+': { name: 'Door', g: '▯', c: '#c09060' },
+  'o': { name: 'Fountain', g: '○', c: '#7fb0d0', block: true },
+  '|': { name: 'Fence', g: '│', c: '#8a6a40', block: true },
+  '-': { name: 'Fence', g: '─', c: '#8a6a40', block: true },
+  '^': { name: 'Mountain rock', g: '▲', c: '#8a7f70', vary: 0.18, block: true, opaque: true, msg: 'Sheer rock. Far too steep to climb here.' },
+  ':': { name: 'Scree', g: '∴', c: '#9a9080', vary: 0.12, danger: 0.7 },
+  '/': { name: 'Steep slope', g: '╱', c: '#c8a870', climb: 3, hint: 'climbing costs stamina' },
+  '_': { name: 'Ledge', g: '▁', c: '#d0b080', ledge: true, hint: 'hop down from above' },
+  '%': { name: 'Rubble', g: '▒', c: '#6a6058', block: true },
+  '0': { name: 'Pillar', g: '◙', c: '#8a8a9a', block: true, opaque: true },
+  'x': { name: 'Shard crystal', g: '◆', c: '#5fe0e0', block: true, glow: true },
+});
+
+SF._file("content/looks.js");
+'use strict';
+/* =====================================================================
+   How map objects look (any Unicode except emoji). A map's legend entry
+   can override `g` and `c` for one object. People use the glyph/color
+   from content/npcs; bosses use the glyph from their enemy entry.
+   ===================================================================== */
+SF.set('looks', {
+  shrine: { g: 'Ω', c: '#d08bff', name: '{m}Shrine of Echoes{/} {d}(spend shards){/}' },
+  chest:  { g: '▣', c: '#ffb020', name: '{y}Chest{/}' },
+  stone:  { g: 'Π', c: '#7fffe0', name: '{c}Standing stone{/} {d}(it hums){/}', glow: true, spent: '#4a5a58' },
+  vista:  { g: '☼', c: '#ffffff', name: '{w}Lookout{/}', glow: true, spent: '#8a8a96' },
+  sign:   { g: '╤', c: '#c8a070', name: 'Signpost' },
+  secret: { g: '█', c: '#55525f', name: 'Cracked wall' },
+  // exits: stairs get an arrow, edge exits glow on the ground
+  go:     { up: '⇑', down: '⇓', c: '#5fe0e0', bg: '#0f2a2e' },
 });
 
 SF._file("content/regions.js");
@@ -358,7 +379,7 @@ SF.define('maps', {
     ],
     legend: {
       b: { go: 'woods:b' },
-      D: { go: 'cave_depths:U', glyph: '>' },     // stairs down
+      D: { go: 'cave_depths:U', dir: 'down' },     // stairs down
       C: { chest: { gold: [40, 70], item: 'sp_draught' } },
       K: { chest: { gold: [30, 50], item: 'st_tonic' } },
     },
@@ -399,7 +420,7 @@ SF.define('maps', {
       '############################################################',
     ],
     legend: {
-      U: { go: 'cave:D', glyph: '<' },           // stairs up
+      U: { go: 'cave:D', dir: 'up' },           // stairs up
       '*': { npc: 'altar' },
       C: { chest: { weapon: 'ember_blade', gold: [20, 40] } },
       s: { secret: true },                       // a cracked wall you can walk through
@@ -443,7 +464,7 @@ SF.define('maps', {
     ],
     legend: {
       s: { go: 'village:n' },
-      U: { go: 'switchbacks:D', glyph: '<' },    // the trail climbs higher
+      U: { go: 'switchbacks:D', dir: 'up' },    // the trail climbs higher
       C: { chest: { gold: [15, 30], item: 'antidote', count: 2 } },
       P: { sign: '{c}ASHPEAK.{/} Steep slopes ({y}/{/}) take stamina to climb. Ledges ({y}_{/}) can only be hopped down.' },
     },
@@ -498,8 +519,8 @@ SF.define('maps', {
       '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^',
     ],
     legend: {
-      D: { go: 'foothills:U', glyph: '>' },
-      U: { go: 'ridge:D', glyph: '<' },
+      D: { go: 'foothills:U', dir: 'down' },
+      U: { go: 'ridge:D', dir: 'up' },
       C: { chest: { gold: [30, 50], item: 'st_tonic', count: 2 } },
       I: { stone: true },
       P: { sign: 'The trail zig-zags up the mountain. {d}Hop down a ledge to get back down fast.{/}' },
@@ -521,7 +542,7 @@ SF.define('maps', {
     retile: {                        // this map's ground is snow and ice
       '.': { name: 'Snow', c: '#dfe8f0' },
       ',': { name: 'Snowdrift', c: '#a8bccc' },
-      'w': { name: 'Thin ice', g: '=', c: '#9fd4f0', bg: null },
+      'w': { name: 'Thin ice', g: '▭', c: '#9fd4f0', bg: null },
     },
     rows: [
       '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^',
@@ -546,8 +567,8 @@ SF.define('maps', {
       '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^',
     ],
     legend: {
-      D: { go: 'switchbacks:U', glyph: '>' },
-      U: { go: 'summit:D', glyph: '<' },
+      D: { go: 'switchbacks:U', dir: 'down' },
+      U: { go: 'summit:D', dir: 'up' },
       C: { chest: { learn: 'whirlwind', gold: [20, 40] } },
       K: { chest: { weapon: 'galecutter' } },
       s: { secret: true },
@@ -593,7 +614,7 @@ SF.define('maps', {
       '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^',
     ],
     legend: {
-      D: { go: 'ridge:U', glyph: '>' },
+      D: { go: 'ridge:U', dir: 'down' },
       V: { boss: 'stormcrow' },
       C: { chest: { learn: 'thunder', shards: 10 } },
       I: { stone: true },
@@ -817,7 +838,7 @@ SF.define('enemies', {
   },
   stormcrow: {
     name: 'The Stormcrow', lvl: 7, hp: 320, atk: 19, def: 5, xp: 120, gold: [60, 80], color: '#7fb4ff',
-    boss: true, solo: true, glyph: 'V',
+    boss: true, solo: true, glyph: 'Ѵ',
     moves: [['talon', 3], ['gale', 2], ['soar', 1], ['thunderclap', 1]], weak: ['frost'], resist: ['storm'],
     intro: '{b}Thunder rolls. A shadow blots out the sun: THE STORMCROW DIVES!{/}',
     onDefeat: { flag: 'stormcrow', text: '{b}The Stormcrow crashes into the snow and breaks apart into wind and feathers. The way to the peak is open.{/}' },
@@ -846,7 +867,7 @@ SF.define('enemies', {
   },
   warden: {
     name: 'The Veil Warden', lvl: 9, hp: 700, atk: 26, def: 8, xp: 300, gold: [200, 200], color: '#ff5577',
-    boss: true, solo: true, glyph: 'W',
+    boss: true, solo: true, glyph: 'Ψ',
     moves: [['rend', 3], ['veil_rend', 1], ['void_whispers', 1], ['devour_light', 1]],
     phase2: { at: 0.5, text: '{r}The Warden screams. The crack in the sky widens and its eyes multiply!{/}',
       moves: [['rend', 2], ['veil_rend', 1], ['void_whispers', 1], ['devour_light', 1], ['gather_dark', 1]] },
@@ -985,17 +1006,17 @@ SF._file("content/npcs/emberhollow.js");
 /* People and talkable things. Place them on a map with a legend entry
    like  E: { npc: 'maren' }.  `dialog` -> content/story, `shop` -> content/shops. */
 SF.define('npcs', {
-  maren:  { name: 'Elder Maren', glyph: '&', color: '#ffd866', dialog: 'elder' },
-  bram:   { name: 'Bram the merchant', glyph: '&', color: '#ffb020', shop: 'bram' },
-  tobba:  { name: 'Tobba the innkeeper', glyph: '&', color: '#ff9a4a', dialog: 'inn' },
+  maren:  { name: 'Elder Maren', glyph: '☺', color: '#ffd866', dialog: 'elder' },
+  bram:   { name: 'Bram the merchant', glyph: '☺', color: '#ffb020', shop: 'bram' },
+  tobba:  { name: 'Tobba the innkeeper', glyph: '☺', color: '#ff9a4a', dialog: 'inn' },
 });
 
 SF._file("content/npcs/wilds.js");
 'use strict';
 /* People and objects out in the wild. */
 SF.define('npcs', {
-  hermit: { name: 'Old Hermit', glyph: '&', color: '#5fe0e0', dialog: 'hermit' },
-  altar:  { name: 'Shard Altar', glyph: '*', color: '#5fe0e0', dialog: 'altar', glow: true },
+  hermit: { name: 'Old Hermit', glyph: '☺', color: '#5fe0e0', dialog: 'hermit' },
+  altar:  { name: 'Shard Altar', glyph: '◈', color: '#5fe0e0', dialog: 'altar', glow: true },
 });
 
 SF._file("content/story/chapter1/quests.js");
@@ -1034,7 +1055,7 @@ SF.define('dialogues', {
         choices: [{ t: "I'll help. What do you need?", do: ['accept:q1'], go: 'accept' }, { t: 'Who are you?', go: 'who' }, { t: 'Not now.' }] },
       who: { text: "\"Maren. I've kept Emberhollow's ember-well lit for sixty winters.\" She taps her temple. \"The shards hum. You hear them, don't you? That's why you woke here.\"",
         choices: [{ t: 'Tell me about the trouble.', go: 'intro' }, { t: 'Farewell.' }] },
-      accept: { text: "\"Cull four of the tainted beasts in the {c}Whispering Woods{/}, east of the village. Bram sells potions in the shop to the west.\"\n\"The {m}Shrine of Echoes{/} ({m}n{/}) to the south answers to spirit shards. And if you have legs for it, the goat trail north climbs {c}Ashpeak{/}. Old standing stones up there still hum with power.\"",
+      accept: { text: "\"Cull four of the tainted beasts in the {c}Whispering Woods{/}, east of the village. Bram sells potions in the shop to the west.\"\n\"The {m}Shrine of Echoes{/} ({m}Ω{/}) to the south answers to spirit shards. And if you have legs for it, the goat trail north climbs {c}Ashpeak{/}. Old standing stones up there still hum with power.\"",
         choices: [{ t: "I'm on it." }] },
       q1active: { text: "\"The woods still writhe. Cull the tainted beasts. %q1% so far.\"", choices: [{ t: 'On my way.' }] },
       q1ready: { text: "Maren studies the blood on your blade and nods slowly.\n\"Good. You fight like someone who's done this before, even if you don't remember it.\"",
@@ -1112,19 +1133,20 @@ SF._file("content/cosmetics/looks.js");
 'use strict';
 /* =====================================================================
    Cosmetics from the Shrine of Echoes. r = rarity (0 Common .. 3
-   Legendary), def = owned from the start. Glyphs are plain ASCII.
+   Legendary), def = owned from the start. Any Unicode but emoji.
    ===================================================================== */
 SF.define('cosmetics', {
   // --- glyphs: your marker on the map ---
   g_at:     { type: 'glyph', name: 'Classic', val: '@', r: 0, def: true },
-  g_quest:  { type: 'glyph', name: 'Quester', val: 'Q', r: 0 },
-  g_hour:   { type: 'glyph', name: 'Hourglass', val: '8', r: 0 },
-  g_mark:   { type: 'glyph', name: 'Marked', val: 'X', r: 1 },
-  g_hollow: { type: 'glyph', name: 'Hollow', val: '0', r: 1 },
-  g_ward:   { type: 'glyph', name: 'Warden', val: 'G', r: 1 },
-  g_riddle: { type: 'glyph', name: 'Riddle', val: '?', r: 2 },
-  g_crown:  { type: 'glyph', name: 'Monarch', val: 'M', r: 2 },
-  g_veil:   { type: 'glyph', name: 'Veilborn', val: 'V', r: 3 },
+  g_smile:  { type: 'glyph', name: 'Grin', val: '☻', r: 0 },
+  g_para:   { type: 'glyph', name: 'Pilcrow', val: '¶', r: 0 },
+  g_amp:    { type: 'glyph', name: 'Ampersand', val: '&', r: 0 },
+  g_theta:  { type: 'glyph', name: 'Theta', val: 'Θ', r: 1 },
+  g_spade:  { type: 'glyph', name: 'Spade', val: '♠', r: 1 },
+  g_heart:  { type: 'glyph', name: 'Heart', val: '♥', r: 1 },
+  g_sun:    { type: 'glyph', name: 'Sunburst', val: '☼', r: 2 },
+  g_omega:  { type: 'glyph', name: 'Omega', val: 'Ω', r: 2 },
+  g_zhe:    { type: 'glyph', name: 'Starfall', val: 'Ж', r: 3 },
 
   // --- colors ---
   c_white:  { type: 'color', name: 'Bone White', val: '#f0f0f0', r: 0, def: true },
@@ -1701,15 +1723,15 @@ SF._file("content/sprites/ui/art.js");
    The base color comes from whatever uses the sprite (e.g. enemy color).
    ===================================================================== */
 SF.define('sprites', {
-  logo: {   // 64 x 6  (figlet font "big")
+  logo: {   // 72 x 6  (figlet font "ANSI Shadow")
     frames: [
       String.raw`
-  _____ _    _          _____  _____  ______      _      _
- / ____| |  | |   /\   |  __ \|  __ \|  ____/\   | |    | |
-| (___ | |__| |  /  \  | |__) | |  | | |__ /  \  | |    | |
- \___ \|  __  | / /\ \ |  _  /| |  | |  __/ /\ \ | |    | |
- ____) | |  | |/ ____ \| | \ \| |__| | | / ____ \| |____| |____
-|_____/|_|  |_/_/    \_\_|  \_\_____/|_|/_/    \_\______|______|
+███████╗██╗  ██╗ █████╗ ██████╗ ██████╗ ███████╗ █████╗ ██╗     ██╗
+██╔════╝██║  ██║██╔══██╗██╔══██╗██╔══██╗██╔════╝██╔══██╗██║     ██║
+███████╗███████║███████║██████╔╝██║  ██║█████╗  ███████║██║     ██║
+╚════██║██╔══██║██╔══██║██╔══██╗██║  ██║██╔══╝  ██╔══██║██║     ██║
+███████║██║  ██║██║  ██║██║  ██║██████╔╝██║     ██║  ██║███████╗███████╗
+╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝
 `,
     ],
     rows: ['#5fe0e0', '#72d2f2', '#86c2ff', '#a4adff', '#c096ff', '#d08bff'],   // one color per line, top to bottom
@@ -1729,6 +1751,67 @@ SF.define('sprites', {
     ],
     tint: { '_': '#9a6ac0' },
   },
+});
+
+SF._file("content/sprites/items.js");
+'use strict';
+/* =====================================================================
+   Inventory icons (3 x 2). Items and weapons use the sprite named
+   icon_<id> unless they set `icon: 'someSprite'`. Any Unicode but emoji.
+     color  the icon's base color      tint  per-character colors
+   ===================================================================== */
+SF.define('sprites', {
+  // ---- potions and consumables ----
+  icon_hp_potion:  { frames: [String.raw`
+╭┴╮
+╰♥╯
+`], color: '#b8c4d8', tint: { '♥': '#ff4f5f' } },
+  icon_st_tonic:   { frames: [String.raw`
+╭┴╮
+╰≈╯
+`], color: '#b8c4d8', tint: { '≈': '#7ddc6f' } },
+  icon_sp_draught: { frames: [String.raw`
+╭┴╮
+╰◆╯
+`], color: '#b8c4d8', tint: { '◆': '#5ca8ff' } },
+  icon_calm_tea:   { frames: [String.raw`
+ ≀≀
+╘═╛
+`], color: '#c8a070', tint: { '≀': '#9a9aaa' } },
+  icon_antidote:   { frames: [String.raw`
+╭┴╮
+╰+╯
+`], color: '#b8c4d8', tint: { '+': '#a8e050' } },
+  icon_smoke_bomb: { frames: [String.raw`
+ ∿
+(●)
+`], color: '#8a8a9a', tint: { '∿': '#c8c8d0', '●': '#5a5a6a' } },
+
+  // ---- weapons ----
+  icon_wooden_sword: { frames: [String.raw`
+  ╱
+ ╳
+`], color: '#c8a068', tint: { '╳': '#8a6a40' } },
+  icon_stone_sword:  { frames: [String.raw`
+  ╱
+ ╳
+`], color: '#a8a8a0', tint: { '╳': '#7a6a58' } },
+  icon_steel_sword:  { frames: [String.raw`
+  ╱
+ ╳
+`], color: '#e0e6f0', tint: { '╳': '#e0b050' } },
+  icon_ember_blade:  { frames: [String.raw`
+˙ ╱
+ ╳˙
+`], color: '#ff8a3d', tint: { '╳': '#c04020', '˙': '#ffd040' } },
+  icon_galecutter:   { frames: [String.raw`
+~ ╱
+ ╳
+`], color: '#bfe8ff', tint: { '╳': '#7fd8ff', '~': '#7fd8ff' } },
+  icon_hand_axe:     { frames: [String.raw`
+▐▀╱
+ ╱
+`], color: '#8a6a40', tint: { '▐': '#c8ccd8', '▀': '#c8ccd8' } },
 });
 
 SF._file("src/engine/core.js");
@@ -1864,6 +1947,10 @@ SF._file("src/engine/validate.js");
   }
   for (const [id, w] of Object.entries(D.weapons)) {
     if (!has('sprites', w.sprite || id)) bad(w, `weapon "${id}": no sprite "${w.sprite || id}"`);
+    if (!has('sprites', w.icon || 'icon_' + id)) bad(w, `weapon "${id}": no inventory icon "${w.icon || 'icon_' + id}"`);
+  }
+  for (const [id, it] of Object.entries(D.items)) {
+    if (!has('sprites', it.icon || 'icon_' + id)) bad(it, `item "${id}": no inventory icon "${it.icon || 'icon_' + id}"`);
   }
   for (const tbl of ['skills', 'spells']) {
     for (const [id, x] of Object.entries(D[tbl])) if (x.el && !has('elements', x.el)) bad(x, `${tbl} "${id}": unknown element "${x.el}"`);
@@ -1896,7 +1983,8 @@ SF._file("src/engine/validate.js");
     const frames = sp.frames || [sp.art];
     if (!frames[0]) { bad(sp, `sprite "${id}" has no art`); continue; }
     for (const f of frames) for (const ln of f) {
-      if (/[^\x20-\x7e]/.test(ln)) bad(sp, `sprite "${id}" uses a non-ASCII character: "${ln}"`);
+      const s = Array.isArray(ln) ? ln.join('') : ln;
+      if (/\p{Emoji_Presentation}|[\u{1F000}-\u{1FAFF}]/u.test(s)) bad(sp, `sprite "${id}" uses an emoji: "${s}"`);
     }
     if (sp.mask) {
       const m = sp.mask;
@@ -2125,14 +2213,7 @@ SF._file("src/engine/world.js");
 
   const KIND_ORDER = ['go', 'npc', 'shrine', 'chest', 'stone', 'vista', 'sign', 'boss', 'secret'];
   const BUMP = { npc: 1, shrine: 1, chest: 1, stone: 1, vista: 1, sign: 1, boss: 1 };
-  const LOOK = {   // how map objects look (a legend entry can override g / c)
-    shrine: { g: 'n', c: '#d08bff', name: '{m}Shrine of Echoes{/} {d}(spend shards){/}' },
-    chest: { g: '$', c: '#ffb020', name: '{y}Chest{/}' },
-    stone: { g: 'I', c: '#7fffe0', name: '{c}Standing stone{/} {d}(it hums){/}', glow: true },
-    vista: { g: '!', c: '#ffffff', name: '{w}Lookout{/}', glow: true },
-    sign: { g: 'P', c: '#c8a070', name: 'Signpost' },
-    secret: { g: '#', c: '#77707f', name: 'Cracked wall' },
-  };
+  const LOOK = D.looks;   // content/looks.js
   const VOID = { key: ' ', name: '', g: ' ', c: '#000000', block: true, opaque: true };
 
   /* ---------- Prepare maps once at load ---------- */
@@ -2176,14 +2257,14 @@ SF._file("src/engine/world.js");
   /* ---------- What a map cell looks like (for the UI) ---------- */
   E.cell = function (s, M, x, y) {
     const t = E.terrain(M, x, y), o = E.objAt(s, M, x, y);
-    const base = { g: t.g, c: t.c, bg: t.bg || null, name: t.name, hint: t.hint || null, glow: !!t.glow };
+    const base = { g: t.g, c: t.c, bg: t.bg || null, name: t.name, hint: t.hint || null, glow: !!t.glow, vary: t.vary || 0, shimmer: !!t.shimmer };
     if (!o) return base;
     const used = s.world.used[o.key];
     switch (o.kind) {
       case 'go': {
         const T = MAPS[String(o.go).split(':')[0]];
-        const verb = o.glyph === '<' ? 'Way up to' : o.glyph === '>' ? 'Way down to' : 'Path to';
-        return { g: o.glyph || t.g, c: '#5fe0e0', bg: o.glyph ? null : '#0f2a2e', name: `{c}${verb} ${T ? T.def.name : '?'}{/}`, exit: true };
+        const G = LOOK.go, verb = o.dir === 'up' ? 'Way up to' : o.dir === 'down' ? 'Way down to' : 'Path to';
+        return { g: o.g || G[o.dir] || t.g, c: G.c, bg: o.dir ? null : G.bg, name: `{c}${verb} ${T ? T.def.name : '?'}{/}`, exit: true };
       }
       case 'npc': {
         const n = D.npcs[o.npc];
@@ -2195,7 +2276,7 @@ SF._file("src/engine/world.js");
       }
       default: {
         const L = LOOK[o.kind];
-        const c = used ? '#4a5a58' : o.c || L.c;
+        const c = used ? L.spent || '#4a5a58' : o.c || L.c;
         const name = used ? `${o.kind === 'stone' ? 'Standing stone {d}(silent now){/}' : L.name}` : L.name;
         return { g: o.g || L.g, c, name, glow: !used && !!L.glow };
       }
@@ -3179,9 +3260,54 @@ SF._file("src/engine/items.js");
     const p = s.p, w = D.weapons[a.id];
     if (!w || !p.weapons.includes(a.id)) return E.fail("You don't own that weapon.");
     if (p.weapon === a.id) return E.fail(`${w.name} is already equipped.`);
+    const slot = (p.bag || []).indexOf('w:' + a.id);
+    if (slot >= 0) p.bag[slot] = 'w:' + p.weapon;   // the old weapon takes the new one's slot
     p.weapon = a.id;
     E.log(s, `You equip the {w}${w.name}{/}.`);
     return true;
+  };
+
+  /* ---------- The bag: slots for the inventory screen ----------
+     p.bag is an array of slots holding an item id ('hp_potion') or an
+     unequipped weapon ('w:steel_sword'). Counts still live in p.inv; the
+     bag only remembers WHERE things sit, so it is re-synced after every
+     action: new things go into the first free slot, used-up things leave. */
+  E.BAG_SIZE = 32;
+  E.syncBag = function (p) {
+    if (!Array.isArray(p.bag)) p.bag = [];
+    while (p.bag.length < E.BAG_SIZE) p.bag.push(null);
+    const want = [];
+    for (const id of Object.keys(D.items)) if (p.inv[id] > 0) want.push(id);
+    for (const w of p.weapons) if (w !== p.weapon) want.push('w:' + w);
+    const keep = new Set(want);
+    p.bag = p.bag.map((k) => (k && keep.has(k) ? k : null));
+    const have = new Set(p.bag.filter(Boolean));
+    for (const k of want) {
+      if (have.has(k)) continue;
+      let i = p.bag.indexOf(null);
+      if (i < 0) { p.bag.push(null); i = p.bag.length - 1; }
+      p.bag[i] = k;
+    }
+  };
+
+  // Swap two slots (moving onto an empty slot just moves).
+  E.arrange = function (s, a) {
+    const b = s.p.bag, from = a.from | 0, to = a.to | 0;
+    if (!b || from < 0 || to < 0 || from >= b.length || to >= b.length || from === to) return E.fail(null);
+    [b[from], b[to]] = [b[to], b[from]];
+    return true;
+  };
+
+  // What sits in a bag slot, for the UI.
+  E.slotInfo = function (s, k) {
+    if (!k) return null;
+    const p = s.p;
+    if (k.startsWith('w:')) {
+      const id = k.slice(2), w = D.weapons[id];
+      return w ? { key: k, kind: 'weapon', id, name: w.name, desc: w.desc, count: 1, icon: w.icon || 'icon_' + id, def: w } : null;
+    }
+    const it = D.items[k];
+    return it ? { key: k, kind: 'item', id: k, name: it.name, desc: it.desc, count: p.inv[k] || 0, icon: it.icon || 'icon_' + k, def: it } : null;
   };
 
   /* ---------- Shops ---------- */
@@ -3225,8 +3351,11 @@ SF._file("src/engine/items.js");
     return true;
   };
 
-  E.inventory = (s) => Object.keys(D.items).filter((id) => s.p.inv[id] > 0)
-    .map((id) => Object.assign({ id, count: s.p.inv[id] }, D.items[id]));
+  // Usable items, in the order they sit in the bag.
+  E.inventory = function (s) {
+    E.syncBag(s.p);
+    return s.p.bag.filter((k) => k && !k.startsWith('w:')).map((id) => Object.assign({ id, count: s.p.inv[id] }, D.items[id]));
+  };
 
   E.shopList = function (s) {
     const p = s.p, sh = D.shops[s.shop];
@@ -3456,13 +3585,14 @@ SF._file("src/engine/state.js");
     const d = E.derived(p);
     p.hp = d.maxHp; p.st = d.maxSt; p.sp = d.maxSp;
     p.visited[R.start.map] = 1;
+    E.syncBag(p);
     const s = { v: SAVE_VERSION, seed, rng: seed | 0, scene: 'explore', p,
       world: { gone: {}, used: {}, seen: {} }, combat: null, dialog: null, shop: null, dead: null, log: [] };
     E.invalidateFov();
     E.reveal(s);
     E.log(s, '{d}Three nights ago, the sky cracked like ice.{/}');
     E.log(s, `You wake beside the fountain of {y}Emberhollow{/}, ${p.name}. You remember your name, and nothing else.`);
-    E.log(s, 'Elder Maren ({y}&{/}) is waiting nearby. Walk into people to talk to them.');
+    E.log(s, 'Elder Maren ({y}☺{/}) is waiting nearby. Walk into people to talk to them.');
     return s;
   };
 
@@ -3482,6 +3612,7 @@ SF._file("src/engine/state.js");
     p.weapons = (p.weapons || []).filter((w) => D.weapons[w]);
     if (!p.weapons.length) p.weapons = [R.start.weapon];
     if (s.scene === 'combat' && !s.combat) s.scene = 'explore';
+    E.syncBag(p);
     E.invalidateFov();
     E.reveal(s);
     return s;
@@ -3527,6 +3658,7 @@ SF._file("src/engine/api.js");
      pull     {n: 1 | 10}               shrine
      leave                              dialog, shop, shrine
      respawn                            gameover
+     arrange  {from, to}                any but gameover   swap two bag slots
 
    FX (animation hints, each has n = log length when it happened):
      start act ehit eheal phit hhit emove dodge kill burn freeze frozen
@@ -3553,6 +3685,7 @@ var Engine = (function () {
     sell:     [['shop'], E.sell],
     pull:     [['shrine'], E.pull],
     leave:    [['dialog', 'shop', 'shrine'], E.leave],
+    arrange:  [['explore', 'shop', 'shrine', 'dialog', 'combat'], E.arrange],
     respawn:  [['gameover'], E.respawn],
   };
 
@@ -3563,6 +3696,7 @@ var Engine = (function () {
     if (!h) E.fail('Unknown action.');
     else if (!h[0].includes(s.scene)) { E.OUT.ok = false; E.OUT.msg = 'wrong scene'; }
     else h[1](s, a);
+    E.syncBag(s.p);
     const out = E.OUT;
     E.OUT = null;
     E.CUR = null;
@@ -3580,6 +3714,7 @@ var Engine = (function () {
     // menus
     dialogView: E.dialogView, questLog: E.questLog, abilities: E.abilities, inventory: E.inventory,
     shopList: E.shopList, sellPrice: E.sellPrice, journal: E.journal,
+    bag: (s) => { E.syncBag(s.p); return s.p.bag.map((k) => E.slotInfo(s, k)); }, BAG_SIZE: E.BAG_SIZE,
     intent: (s, e) => E.intentInfo(s, e),
   };
 })();
@@ -3590,63 +3725,101 @@ SF._file("src/ui/screen.js");
 'use strict';
 /* =====================================================================
    SHARDFALL ui - screen.js
-   The game draws onto a 100 x 34 grid of colored characters.
+   The game draws onto a 128 x 42 grid of colored characters, plus a
+   second FINE grid on top at half the font size (256 x 84) for tiny
+   text: slot counts, item names, tooltips, small labels.
 
-   Every frame: clear() -> scenes put() characters into a buffer ->
-   flush() turns each row into HTML and only rewrites rows that changed.
-   Clickable things register a "region"; the mouse code looks it up.
+   Every frame: clear() -> scenes draw into buffers -> flush() turns
+   each row into HTML and only rewrites rows that changed.
+     U.put / U.text / U.mtext      normal-size text, in main cells
+     U.small / U.msmall            half-size text; x, y in main cells,
+                                   may be x.5 / y.5 for half-cell offsets
+   The two layers are "last writer wins" per main cell: tiny text blanks
+   the big character under it, and drawing a big character (or a modal)
+   later erases tiny text under it.
 
-   Strict ASCII mode (Menu > Settings) swaps the box-drawing frame lines
-   and bar blocks for plain + - | # . characters at flush time.
+   No emoji, ever: every non-ASCII symbol gets U+FE0E (text style) and
+   the page asks for text-style emoji glyphs in CSS.
    ===================================================================== */
 (function () {
   const U = SF.UI;
-  const COLS = 100, ROWS = 34, N = COLS * ROWS;
+  const COLS = 128, ROWS = 42, N = COLS * ROWS;
+  const FCOLS = COLS * 2, FROWS = ROWS * 2, FN = FCOLS * FROWS;
+
+  // Where everything goes. Boxes include their border.
+  const L = {
+    MAP: { x: 0, y: 0, w: 66, h: 26 },
+    SIDE: { x: 66, y: 0, w: 62, h: 26 },
+    LOG: { x: 0, y: 26, w: 78, h: 15 },
+    PACK: { x: 78, y: 26, w: 50, h: 15 },
+    BAR: 41,
+  };
+  L.VIEW = { x: L.MAP.x + 1, y: L.MAP.y + 1, w: L.MAP.w - 2, h: L.MAP.h - 2 };   // inside the map panel
+
   Object.assign(U, {
-    COLS, ROWS,
+    COLS, ROWS, L,
     FG: '#c8c8d0', DIM: '#6a6a78', MODAL_BG: '#13131b', HOVER_BG: '#2c2c40', SEL_BG: '#1f2d47', BANNER_BG: '#1a1a2a',
     C: { r: '#ff5c5c', g: '#6bdc6b', b: '#5ca8ff', c: '#5fe0e0', m: '#d08bff', y: '#ffd866', o: '#ff9a4a', w: '#ffffff', d: '#7a7a88' },
     FRAMES: { single: '┌┐└┘─│├┤', double: '╔╗╚╝═║╠╣', rounded: '╭╮╰╯─│├┤', heavy: '┏┓┗┛━┃┣┫', ascii: '++++-|++' },
-    settings: { ascii: false, timed: true, fast: false },
+    settings: { timed: true, fast: false },
   });
   const { FG, C } = U;
 
-  // Strict ASCII: box-drawing and block characters -> plain ASCII.
-  const ASCII_MAP = {};
-  '┌┐└┘╔╗╚╝╭╮╰╯┏┓┗┛├┤╠╣┣┫'.split('').forEach((c) => (ASCII_MAP[c] = '+'));
-  '─━'.split('').forEach((c) => (ASCII_MAP[c] = '-'));
-  ASCII_MAP['═'] = '=';
-  '│║┃'.split('').forEach((c) => (ASCII_MAP[c] = '|'));
-  Object.assign(ASCII_MAP, { '█': '#', '▓': '%', '▒': ':', '░': '.' });
-
-  /* ---------- DOM: one <div> per screen row ---------- */
+  /* ---------- DOM: a stage holding the main grid and the fine grid ---------- */
   const screen = document.getElementById('screen');
+  const stage = document.createElement('div');
+  stage.id = 'stage';
+  screen.parentNode.insertBefore(stage, screen);
+  stage.appendChild(screen);
+  const fine = document.createElement('pre');
+  fine.id = 'fine';
+  stage.appendChild(fine);
   const css = document.createElement('style');
   css.textContent =
-    '#screen div{height:1.15em;overflow:hidden}' +
-    '#screen div span{display:inline-block;height:1.15em;vertical-align:top}' +
-    '#screen i{display:inline-block;width:1ch;font-style:normal;text-align:center;overflow:hidden;vertical-align:top}';
+    '#stage{position:relative}' +
+    '#screen,#fine{font-variant-emoji:text}' +
+    '#fine{position:absolute;left:0;top:0;margin:0;pointer-events:none;white-space:pre;line-height:1.15;font-family:inherit}' +
+    '#screen div,#fine div{height:1.15em;overflow:hidden}' +
+    '#screen div span,#fine div span{display:inline-block;height:1.15em;vertical-align:top}' +
+    '#screen i,#fine i{display:inline-block;width:1ch;font-style:normal;text-align:center;overflow:hidden;vertical-align:top}';
   document.head.appendChild(css);
-  screen.textContent = '';
-  const rowEls = [], rowHTML = [];
-  for (let y = 0; y < ROWS; y++) {
-    const el = document.createElement('div');
-    screen.appendChild(el);
-    rowEls.push(el);
-    rowHTML.push('');
-  }
-  U.screenEl = screen;
+  fine.style.fontFamily = getComputedStyle(screen).fontFamily;
 
-  /* ---------- Cell buffer ---------- */
+  function makeRows(el, n) {
+    el.textContent = '';
+    const rows = [];
+    for (let y = 0; y < n; y++) { const d = document.createElement('div'); el.appendChild(d); rows.push(d); }
+    return rows;
+  }
+  const rowEls = makeRows(screen, ROWS), rowHTML = new Array(ROWS).fill('');
+  const fineEls = makeRows(fine, FROWS), fineHTML = new Array(FROWS).fill('');
+  U.screenEl = screen;
+  U.fineEl = fine;
+
+  /* ---------- Buffers ---------- */
   const ch = new Array(N), fg = new Array(N), bg = new Array(N), rg = new Int16Array(N);
+  const fch = new Array(FN), ffg = new Array(FN), fbg = new Array(FN);
+  const fmark = new Uint8Array(N);              // main cells that currently hold tiny text
+  const fUsed = new Uint8Array(FROWS), fWas = new Uint8Array(FROWS);
   U.regions = [];
   U.rg = rg;
 
-  U.clear = function () { ch.fill(' '); fg.fill(FG); bg.fill(null); rg.fill(-1); U.regions = []; };
+  U.clear = function () {
+    ch.fill(' '); fg.fill(FG); bg.fill(null); rg.fill(-1); U.regions = [];
+    fch.fill(' '); ffg.fill(FG); fbg.fill(null); fmark.fill(0);
+    fWas.set(fUsed); fUsed.fill(0);
+  };
+
+  function eraseFine(i) {   // a big character landed on this main cell: drop tiny text under it
+    fmark[i] = 0;
+    const x = (i % COLS) * 2, y = ((i / COLS) | 0) * 2;
+    for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) { const j = (y + dy) * FCOLS + x + dx; fch[j] = ' '; fbg[j] = null; }
+  }
 
   U.put = function (x, y, c, f, b, r) {
     if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return;
     const i = y * COLS + x;
+    if (fmark[i]) eraseFine(i);
     ch[i] = c;
     fg[i] = f || FG;
     if (b) bg[i] = b;
@@ -3656,9 +3829,10 @@ SF._file("src/ui/screen.js");
 
   U.text = function (x, y, str, f, b, r, max) {
     str = String(str);
-    if (max != null && str.length > max) str = str.slice(0, Math.max(0, max - 1)) + '.';
-    for (let k = 0; k < str.length; k++) U.put(x + k, y, str[k], f, b, r);
-    return str.length;
+    if (max != null && str.length > max) str = str.slice(0, Math.max(0, max - 1)) + '…';
+    let n = 0;
+    for (const c of str) U.put(x + n++, y, c, f, b, r);
+    return n;
   };
 
   U.fillBg = function (x, y, w, h, color) {
@@ -3666,47 +3840,90 @@ SF._file("src/ui/screen.js");
       if (xx >= 0 && yy >= 0 && xx < COLS && yy < ROWS) bg[yy * COLS + xx] = color;
     }
   };
-  U.blank = function (x, y, w, h, color) {   // wipe a rectangle (characters, colors, clicks)
+  U.blank = function (x, y, w, h, color) {   // wipe a rectangle (characters, tiny text, colors, clicks)
     for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) {
       if (xx < 0 || yy < 0 || xx >= COLS || yy >= ROWS) continue;
       const i = yy * COLS + xx;
+      if (fmark[i]) eraseFine(i);
       ch[i] = ' '; fg[i] = FG; bg[i] = color || null; rg[i] = -1;
     }
   };
 
-  U.region = function (key, fn) { U.regions.push({ key, fn }); return U.regions.length - 1; };
+  U.region = function (key, fn, alt) { U.regions.push({ key, fn, alt }); return U.regions.length - 1; };
   U.area = function (x, y, w, h, r) {
     for (let yy = y; yy < y + h; yy++) for (let xx = x; xx < x + w; xx++) {
       if (xx >= 0 && yy >= 0 && xx < COLS && yy < ROWS) rg[yy * COLS + xx] = r;
     }
   };
 
-  // Anything outside ASCII and box drawing gets a fixed-width cell so fallback fonts can't break the grid.
+  /* ---------- Tiny text ---------- */
+  function fput(fx, fy, c, f, b) {
+    if (fx < 0 || fy < 0 || fx >= FCOLS || fy >= FROWS) return;
+    const j = fy * FCOLS + fx, i = (fy >> 1) * COLS + (fx >> 1);
+    if (!fmark[i]) { fmark[i] = 1; ch[i] = ' '; }   // the big character under it goes away
+    fch[j] = c; ffg[j] = f || FG;
+    if (b) fbg[j] = b;
+    fUsed[fy] = 1;
+  }
+  U.small = function (x, y, str, f, b, max) {
+    let fx = Math.round(x * 2), n = 0;
+    const fy = Math.round(y * 2);
+    for (const c of String(str)) {
+      if (max != null && n >= max) break;
+      fput(fx + n++, fy, c, f, b);
+    }
+    return n / 2;     // width in main cells
+  };
+  U.msmall = function (x, y, str, base, b, max) {
+    let fx = Math.round(x * 2), n = 0;
+    const fy = Math.round(y * 2);
+    for (const sg of U.segs(String(str), base || FG)) {
+      for (const c of sg.t) {
+        if (max != null && n >= max) return n / 2;
+        fput(fx + n++, fy, c, sg.c, b);
+      }
+    }
+    return n / 2;
+  };
+  U.smallLen = (str) => U.plainLen(str) / 2;
+
+  /* ---------- HTML ---------- */
+  // Symbols that some systems draw as emoji are forced to text style (U+FE0E).
+  const EMOJI = /\p{Emoji}/u;
+  const escCache = {};
   function esc(c) {
-    if (U.settings.ascii && ASCII_MAP[c]) c = ASCII_MAP[c];
     if (c === '<') return '&lt;';
     if (c === '>') return '&gt;';
     if (c === '&') return '&amp;';
-    const n = c.charCodeAt(0);
-    return n > 0x7e && (n < 0x2500 || n > 0x259f) ? `<i>${c}</i>` : c;
+    const n = c.codePointAt(0);
+    if (n <= 0x7e) return c;
+    if (n >= 0x2500 && n <= 0x259f) return c;              // box drawing and blocks: font-native, always text
+    return escCache[c] || (escCache[c] = `<i>${c}${EMOJI.test(c) ? '︎' : ''}</i>`);
   }
-
+  function rowHtml(chs, fgs, bgs, base, width, rgs) {
+    let html = '', x = 0;
+    while (x < width) {
+      const i = base + x, f = fgs[i], b = bgs[i], click = rgs ? rgs[i] >= 0 : false;
+      let run = '';
+      while (x < width) {
+        const j = base + x;
+        if ((fgs[j] !== f && chs[j] !== ' ') || bgs[j] !== b || (rgs ? rgs[j] >= 0 : false) !== click) break;
+        run += esc(chs[j]);
+        x++;
+      }
+      html += `<span style="color:${f}${b ? ';background:' + b : ''}"${click ? ' data-r' : ''}>${run}</span>`;
+    }
+    return html;
+  }
   U.flush = function () {
     for (let y = 0; y < ROWS; y++) {
-      const base = y * COLS;
-      let html = '', x = 0;
-      while (x < COLS) {
-        const i = base + x, f = fg[i], b = bg[i], click = rg[i] >= 0;
-        let run = '';
-        while (x < COLS) {
-          const j = base + x;
-          if ((fg[j] !== f && ch[j] !== ' ') || bg[j] !== b || (rg[j] >= 0) !== click) break;
-          run += esc(ch[j]);
-          x++;
-        }
-        html += `<span style="color:${f}${b ? ';background:' + b : ''}"${click ? ' data-r' : ''}>${run}</span>`;
-      }
+      const html = rowHtml(ch, fg, bg, y * COLS, COLS, rg);
       if (html !== rowHTML[y]) { rowHTML[y] = html; rowEls[y].innerHTML = html; }
+    }
+    for (let y = 0; y < FROWS; y++) {
+      if (!fUsed[y] && !fWas[y]) continue;                  // only rows with tiny text (now or last frame)
+      const html = fUsed[y] ? rowHtml(fch, ffg, fbg, y * FCOLS, FCOLS, null) : '';
+      if (html !== fineHTML[y]) { fineHTML[y] = html; fineEls[y].innerHTML = html; }
     }
   };
 
@@ -3725,7 +3942,7 @@ SF._file("src/ui/screen.js");
     if (last < str.length) out.push({ t: str.slice(last), c: stack[stack.length - 1] });
     return out;
   };
-  U.plainLen = (str) => String(str).replace(MARK, '').length;
+  U.plainLen = (str) => [...String(str).replace(MARK, '')].length;
   U.strip = (str) => String(str).replace(MARK, '');
 
   U.mtext = function (x, y, str, base, b, r, max) {
@@ -3744,15 +3961,15 @@ SF._file("src/ui/screen.js");
   U.wrap = function (str, width, base) {
     const lines = [[]];
     let col = 0;
-    const push = (t, c) => { lines[lines.length - 1].push({ t, c }); col += t.length; };
+    const push = (t, c) => { lines[lines.length - 1].push({ t, c }); col += [...t].length; };
     for (const sg of U.segs(String(str), base || FG)) {
       for (const part of sg.t.split(/(\n| +)/)) {
         if (!part) continue;
         if (part === '\n') { lines.push([]); col = 0; continue; }
         if (part[0] === ' ') { if (col > 0 && col + part.length < width) push(part, sg.c); continue; }
         let word = part;
-        if (col > 0 && col + word.length > width) { lines.push([]); col = 0; }
-        while (word.length > width) { push(word.slice(0, width), sg.c); lines.push([]); col = 0; word = word.slice(width); }
+        if (col > 0 && col + [...word].length > width) { lines.push([]); col = 0; }
+        while ([...word].length > width) { push(word.slice(0, width), sg.c); lines.push([]); col = 0; word = word.slice(width); }
         push(word, sg.c);
       }
     }
@@ -3763,6 +3980,11 @@ SF._file("src/ui/screen.js");
     let n = 0;
     for (const sg of line) for (const c of sg.t) U.put(x + n++, y, c, sg.c, b, r);
     return n;
+  };
+  U.drawSmallLine = function (x, y, line) {   // a wrapped line in tiny text (wrap at 2x the width)
+    let n = 0;
+    for (const sg of line) for (const c of sg.t) { U.small(x + n / 2, y, c, sg.c); n++; }
+    return n / 2;
   };
 
   /* ---------- Widgets ---------- */
@@ -3786,22 +4008,24 @@ SF._file("src/ui/screen.js");
     if (label) U.mtext(x + 2, y, ` ${label} `);
   };
 
-  // A thin labelled rule inside a panel: -- Label ------
+  // A thin labelled rule inside a panel: ── Label ──────
   U.rule = function (x, y, w, label, color) {
-    const t = label ? `-- ${label} ` : '';
-    U.text(x, y, '-'.repeat(w), '#3a3a4a');
-    if (label) U.mtext(x, y, `{#3a3a4a}--{/} ${label} `, color || U.DIM);
-    return t.length;
+    U.text(x, y, '─'.repeat(w), '#34344a');
+    if (label) U.mtext(x + 2, y, ` ${label} `, color || U.DIM);
   };
 
-  // Bars are plain ASCII: '=' for the filled part, '-' for the rest.
+  // Bars: heavy line for the filled part, thin line for the rest. Partial cells use a half line.
   U.bar = function (x, y, w, val, max, color, empty) {
-    const full = max > 0 ? Math.round(Math.max(0, Math.min(1, val / max)) * w) : 0;
-    for (let k = 0; k < w; k++) U.put(x + k, y, k < full ? '=' : '-', k < full ? color : empty || '#2c2c38');
+    const f = max > 0 ? Math.max(0, Math.min(1, val / max)) * w : 0, full = Math.floor(f), half = f - full >= 0.5;
+    for (let k = 0; k < w; k++) {
+      if (k < full) U.put(x + k, y, '━', color);
+      else if (k === full && half) U.put(x + k, y, '╸', color);
+      else U.put(x + k, y, '─', empty || '#3a3a50');
+    }
   };
 
   U.button = function (x, y, label, key, fn, opt = {}) {
-    const r = U.region(key, fn), b = U.ui.hover === key ? U.HOVER_BG : opt.bg || null;
+    const r = U.region(key, fn, opt.alt), b = U.ui.hover === key ? U.HOVER_BG : opt.bg || null;
     let n = U.mtext(x, y, label, opt.color || FG, b, r, opt.max);
     if (opt.w) for (; n < opt.w; n++) U.put(x + n, y, ' ', FG, b, r);
     return n;
@@ -3810,8 +4034,8 @@ SF._file("src/ui/screen.js");
   /* ---------- Little helpers ---------- */
   U.hovered = (key) => U.ui.hover === key;
   U.pct = (f) => Math.round(f * 100) + '%';
-  U.pad = (t, n) => (t.length > n ? t.slice(0, n - 1) + '.' : t.padEnd(n));
-  U.center = (cx, y, str, f, b) => U.text(cx - Math.floor(String(str).length / 2), y, str, f, b);
+  U.pad = (t, n) => { const a = [...String(t)]; return a.length > n ? a.slice(0, n - 1).join('') + '…' : String(t) + ' '.repeat(n - a.length); };
+  U.center = (cx, y, str, f, b) => U.text(cx - Math.floor([...String(str)].length / 2), y, str, f, b);
   U.mcenter = (cx, y, str, base, b) => U.mtext(cx - Math.floor(U.plainLen(str) / 2), y, str, base, b);
   U.hpColor = (f) => (f > 0.6 ? '#6bdc6b' : f > 0.3 ? '#ffd866' : '#ff5c5c');
 
@@ -3861,7 +4085,7 @@ SF._file("src/ui/sprite.js");
     const lines = opt.frame != null ? sp.frames[opt.frame % sp.frames.length] : U.spriteFrame(sp, opt.now, opt.speed);
     const w = sp.w, h = lines.length;
     const x0 = cx - Math.floor(w / 2) + (opt.dx || 0), y0 = bottom - h + 1 + (opt.dy || 0);
-    const base = opt.color || U.FG, tint = sp.tint || {}, bands = sp.bands || null, clip = opt.clip;
+    const base = opt.color || sp.color || U.FG, tint = sp.tint || {}, bands = sp.bands || null, clip = opt.clip;
     lines.forEach((ln, j) => {
       for (let i = 0; i < ln.length; i++) {
         const c = ln[i];
@@ -3903,6 +4127,7 @@ SF._file("src/ui/state.js");
     screen: 'title', overlay: null, hover: null, hcell: null, titleHelp: false, msg: null, saveInfo: null,
     cmenu: 'main', target: 0, dsel: 0, shopTab: 'buy', outfitRow: 0, logScroll: 0, newFrom: 0,
     jTab: 'beasts', jSel: 0,      // journal
+    held: null, invSel: 0,         // inventory: slot being carried, keyboard cursor
     walk: [], walkTimer: null,
     create: null,
     timing: null,                  // the strike bar while it's up
@@ -4039,6 +4264,7 @@ SF._file("src/ui/state.js");
   U.openOverlay = function (name) {
     if (!U.overlayAllowed(name) || U.anim.busy()) return;
     ui.overlay = ui.overlay === name ? null : name;
+    ui.held = null;
     if (ui.overlay === 'journal') {   // start on the first creature you've met
       const list = Engine.journal(ui.s), cur = list[ui.jSel];
       if (!cur || !cur.known) ui.jSel = Math.max(0, list.findIndex((e) => e.known));
@@ -4295,14 +4521,10 @@ SF._file("src/ui/anim.js");
   function callout(g, name, heavy, t) {
     if (!name || t > 0.95) return;
     const txt = heavy ? `${name}!` : name;
-    U.center(g.cx, 1, txt, heavy ? U.C.o : U.C.r, U.BANNER_BG);
+    U.center(g.cx, U.L.VIEW.y, txt, heavy ? U.C.o : U.C.r, U.BANNER_BG);
   }
   function banner(text, color, t) {
-    if (t > 0.97) return;
-    const tt = `   ${text}   `, x = 1 + Math.floor((60 - tt.length) / 2), y = 6;
-    U.text(x, y - 1, ' '.repeat(tt.length), U.FG, U.BANNER_BG);
-    U.text(x, y, tt, color, U.BANNER_BG);
-    U.text(x, y + 1, ' '.repeat(tt.length), U.FG, U.BANNER_BG);
+    if (t <= 0.97) U.bannerAt(text, color);
   }
   function bossBanner(key, t) {
     const e = D.enemies[key];
@@ -4387,25 +4609,25 @@ SF._file("src/ui/fx/strikes.js");
    ===================================================================== */
 (function () {
   const U = SF.UI, S = U.FX.strike;
-  const clip = (x, y) => x >= 1 && x <= 60 && y >= 1 && y <= 20;
+  const V = U.L.VIEW, X1 = V.x + V.w - 1, Y1 = V.y + V.h - 1;
+  const clip = (x, y) => x >= V.x && x <= X1 && y >= V.y && y <= Y1;
   const put = (x, y, c, col) => { if (clip(x, y)) U.put(x, y, c, col); };
   // head -> tail color ramp for streaks
   const ramp = (k, n, hot, mid, cold) => (k === 0 ? hot : k < n * 0.5 ? mid : cold);
 
-  /* A slash streak through the target. dir 0: '/'  1: '\'  2: '-' */
+  /* A slash streak through the target. dir 0: ╱   1: ╲   2: ━ */
   function streak(g, t, dir, cols, thick) {
     const half = Math.max(3, Math.ceil((g.bottom - g.top + 1) / 2) + 1);
     const pts = [];
     for (let k = -half; k <= half; k++) {
-      if (dir === 2) pts.push([g.cx + k * 2, g.cy, '-'], [g.cx + k * 2 + 1, g.cy, '-']);
+      if (dir === 2) pts.push([g.cx + k * 2, g.cy, '━'], [g.cx + k * 2 + 1, g.cy, '━']);
       else {
         const x = g.cx + (dir === 0 ? -k : k) * 2, y = g.cy + k;
-        const c = dir === 0 ? '/' : '\\';
+        const c = dir === 0 ? '╱' : '╲';
         pts.push([x, y, c]);
         if (thick) pts.push([x + 1, y, c]);
       }
     }
-    if (dir !== 2 && dir === 0) pts.sort((a, b) => a[1] - b[1]);   // draw top -> bottom
     const n = pts.length, head = Math.floor(Math.min(1, t / 0.5) * n), fade = t > 0.5 ? (t - 0.5) / 0.5 : 0;
     const tail = Math.max(4, Math.floor(n * 0.6));
     for (let k = 0; k < head && k < n; k++) {
@@ -4418,7 +4640,7 @@ SF._file("src/ui/fx/strikes.js");
   function sparks(g, t, col, ch) {
     if (t < 0.4 || t > 0.85) return;
     const r = 1 + Math.floor((t - 0.4) * 6);
-    for (const [dx, dy] of [[-2, -1], [2, -1], [-2, 1], [2, 1], [-r * 2, 0], [r * 2, 0], [0, -r], [0, r]]) put(g.cx + dx, g.cy + dy, ch || '*', col);
+    for (const [dx, dy] of [[-2, -1], [2, -1], [-2, 1], [2, 1], [-r * 2, 0], [r * 2, 0], [0, -r], [0, r]]) put(g.cx + dx, g.cy + dy, ch || '✦', col);
   }
 
   const WHITE = ['#ffffff', '#fff2b0', '#a08a60'];
@@ -4444,7 +4666,7 @@ SF._file("src/ui/fx/strikes.js");
     if (t > 0.35) {
       for (let k = 0; k < 9; k++) {
         const x = g.cx - 6 + Math.floor(U.hash(k, 3) * 13), rise = Math.floor((t - 0.35) * 8 * (0.5 + U.hash(k, 5)));
-        put(x, g.bottom - rise, U.hash(k, 9) < 0.5 ? '^' : '*', U.mix('#ffdd66', '#c03010', Math.min(1, rise / 6)));
+        put(x, g.bottom - rise, U.hash(k, 9) < 0.5 ? '▴' : '•', U.mix('#ffdd66', '#c03010', Math.min(1, rise / 6)));
       }
     }
   } };
@@ -4452,13 +4674,13 @@ SF._file("src/ui/fx/strikes.js");
     // a spinning arc sweeping across every foe
     const xs = ctx.targets.length ? ctx.targets : [{ cx: 30, cy: 6 }];
     const y = Math.round(xs.reduce((a, g) => a + g.cy, 0) / xs.length);
-    const front = 60 - Math.floor(t * 62);
+    const front = X1 - Math.floor(t * (V.w + 2));
     for (let x = front; x < front + 14; x++) {
       const age = x - front;
       const col = age < 2 ? '#ffffff' : age < 7 ? '#fff2b0' : '#8a7a5a';
-      put(x, y, age % 3 === 0 ? '=' : '-', col);
-      put(x, y - 1 - (age % 2), age < 4 ? '~' : '.', col);
-      put(x, y + 1 + (age % 2), age < 4 ? '~' : '.', col);
+      put(x, y, age % 3 === 0 ? '═' : '─', col);
+      put(x, y - 1 - (age % 2), age < 4 ? '∿' : '·', col);
+      put(x, y + 1 + (age % 2), age < 4 ? '∿' : '·', col);
     }
     for (const g of ctx.targets) if (front <= g.cx && front > g.cx - 10) sparks(g, 0.5, '#ffffff', '+');
   } };
@@ -4470,38 +4692,41 @@ SF._file("src/ui/fx/strikes.js");
     const g = ctx.target;
     for (let k = 0; k < 6; k++) {
       const x = g.cx - 4 + Math.floor(U.hash(k, 11) * 9), rise = Math.floor(t * 4 * (0.6 + U.hash(k, 12)));
-      put(x, g.bottom - rise, U.hash(k, 13) < 0.5 ? '^' : '*', U.mix('#ffdd66', '#c03010', t));
+      put(x, g.bottom - rise, U.hash(k, 13) < 0.5 ? '▴' : '•', U.mix('#ffdd66', '#c03010', t));
     }
   } };
   S.frozen = { dur: 300, draw(t, ctx) {
     const g = ctx.target;
     for (let k = 0; k < 10; k++) {
       if (U.hash(k, Math.floor(t * 6)) < 0.5) continue;
-      put(g.x0 - 1 + Math.floor(U.hash(k, 21) * (g.x1 - g.x0 + 3)), g.top + Math.floor(U.hash(k, 22) * (g.bottom - g.top + 1)), '*', '#bfefff');
+      put(g.x0 - 1 + Math.floor(U.hash(k, 21) * (g.x1 - g.x0 + 3)), g.top + Math.floor(U.hash(k, 22) * (g.bottom - g.top + 1)), '❆', '#bfefff');
     }
   } };
 
   /* ---------- you, in the side panel ---------- */
+  const SB = U.L.SIDE;
   S.item = { dur: 340, draw(t) {
-    for (let k = 0; k < 10; k++) {
-      const x = 64 + Math.floor(U.hash(k, 31) * 33), y = 8 - Math.floor(t * 6 * (0.5 + U.hash(k, 32)));
-      if (y >= 2) U.put(x, y, '+', U.mix('#9fffb0', '#2a6a3a', t));
+    for (let k = 0; k < 14; k++) {
+      const x = SB.x + 2 + Math.floor(U.hash(k, 31) * (SB.w - 4)), y = 8 - Math.floor(t * 6 * (0.5 + U.hash(k, 32)));
+      if (y >= 2) U.put(x, y, k % 3 ? '+' : '✦', U.mix('#9fffb0', '#2a6a3a', t));
     }
   } };
   S.defend = { dur: 360, draw(t) {
-    const art = [' .----. ', '|  ##  |', '|  ##  |', ' \\    / ', "  '--'  "];
-    const col = U.mix('#9ff8ff', '#2a5a6a', Math.max(0, t - 0.5) * 2);
-    art.forEach((ln, j) => U.text(76, 12 + j, ln, col));
+    const art = ['╭──────╮', '│  ▓▓  │', '│  ▓▓  │', '╰╮    ╭╯', ' ╰────╯ '];
+    const col = U.mix('#9ff8ff', '#2a5a6a', Math.max(0, t - 0.5) * 2), w = U.SIDE.weapon;
+    art.forEach((ln, j) => U.text(w.cx - 4, w.bottom - 4 + j, ln, col));
   } };
   S.terror = { dur: 420, draw(t) {
-    for (let y = 15; y <= 20; y++) for (let x = 1; x <= 60; x++) {
-      if (U.hash(x, y, Math.floor(t * 8)) < 0.12) U.put(x, y, '~', U.mix('#d08bff', '#3a2a4a', t));
+    const Z = U.ZONE;
+    for (let y = Z.y0; y <= Z.y1; y++) for (let x = Z.x0; x <= Z.x1; x++) {
+      if (U.hash(x, y, Math.floor(t * 8)) < 0.12) U.put(x, y, '∿', U.mix('#d08bff', '#3a2a4a', t));
     }
   } };
   S.flee = { dur: 300, draw(t) {
-    for (let k = 0; k < 12; k++) {
-      const x = 40 + Math.floor(t * 20) + Math.floor(U.hash(k, 41) * 10), y = 15 + Math.floor(U.hash(k, 42) * 6);
-      put(x, y, U.hash(k, 43) < 0.5 ? '.' : ':', '#8a8a96');
+    const Z = U.ZONE;
+    for (let k = 0; k < 14; k++) {
+      const x = Z.x0 + 36 + Math.floor(t * 24) + Math.floor(U.hash(k, 41) * 10), y = Z.y0 + Math.floor(U.hash(k, 42) * (Z.y1 - Z.y0 + 1));
+      put(x, y, U.hash(k, 43) < 0.5 ? '·' : '∴', '#8a8a96');
     }
   } };
 })();
@@ -4517,7 +4742,8 @@ SF._file("src/ui/fx/spells.js");
    ===================================================================== */
 (function () {
   const U = SF.UI, S = U.FX.spell;
-  const clip = (x, y) => x >= 1 && x <= 61 && y >= 1 && y <= 20;
+  const V = U.L.VIEW, X1 = V.x + V.w - 1, Y1 = V.y + V.h - 1;
+  const clip = (x, y) => x >= V.x && x <= X1 + 1 && y >= V.y && y <= Y1;
   const put = (x, y, c, col) => { if (clip(x, y)) U.put(x, y, c, col); };
   const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -4542,42 +4768,48 @@ SF._file("src/ui/fx/spells.js");
   }
 
   S.fireball = { dur: 620, impact: 0.62, draw(t, ctx) {
-    const g = ctx.targets[0] || { cx: 30, cy: 6 };
-    if (t < 0.6) projectile(ctx.from, g, t / 0.6, '@', ['*', '+', '~', '.'], ['#fff2b0', '#ffd040', '#ff9a3d', '#c04020', '#5a2010']);
+    const g = ctx.targets[0] || { cx: 32, cy: 7 };
+    if (t < 0.6) projectile(ctx.from, g, t / 0.6, '●', ['✦', '•', '∙', '·'], ['#fff2b0', '#ffd040', '#ff9a3d', '#c04020', '#5a2010']);
     else {
       const e = (t - 0.6) / 0.4;
-      if (e < 0.35) for (let dy = -1; dy <= 1; dy++) for (let dx = -3; dx <= 3; dx++) put(g.cx + dx, g.cy + dy, 'x', '#fff2b0');
-      burst(g, e, ['*', '+', '*', '.'], ['#ffffff', '#ffd040', '#ff7a2d', '#a03010'], 4);
-      burst(g, Math.max(0, e - 0.2), ['.', "'"], ['#ff9a3d', '#5a2010'], 5);
+      // a shaded fireball: hot core, cooling edges
+      const R = 1 + e * 3.5;
+      for (let dy = -3; dy <= 3; dy++) for (let dx = -8; dx <= 8; dx++) {
+        const d = Math.sqrt((dx / 2) ** 2 + dy ** 2) / R;
+        if (d > 1) continue;
+        const heat = (1 - d) * (1 - e * 0.8);
+        put(g.cx + dx, g.cy + dy, heat > 0.55 ? '█' : heat > 0.35 ? '▓' : heat > 0.18 ? '▒' : '░', heat > 0.55 ? '#fff2b0' : heat > 0.35 ? '#ffb040' : heat > 0.18 ? '#ff6a2d' : '#8a2a10');
+      }
+      burst(g, e, ['✦', '•', '✦', '·'], ['#ffffff', '#ffd040', '#ff7a2d', '#a03010'], 5);
     }
   } };
 
   S.frostwave = { dur: 720, impact: 0.7, draw(t, ctx) {
-    const front = Math.round(61 - t * 64);
-    for (let y = 2; y <= 13; y++) {
+    const front = Math.round(X1 + 1 - t * (V.w + 4));
+    for (let y = V.y + 1; y <= 15; y++) {
       const wob = Math.round(Math.sin(y * 1.3 + t * 9) * 1.5);
-      for (let x = front + wob; x <= 61; x++) {
+      for (let x = front + wob; x <= X1; x++) {
         const age = x - front - wob;
-        if (age === 0) { put(x, y, '*', '#ffffff'); continue; }
-        if (U.hash(x, y, 3) < Math.max(0.05, 0.45 - age * 0.02)) put(x, y, U.hash(x, y, 4) < 0.5 ? '+' : '.', age < 6 ? '#bfefff' : '#4a7a9a');
+        if (age === 0) { put(x, y, '❆', '#ffffff'); continue; }
+        if (U.hash(x, y, 3) < Math.max(0.05, 0.45 - age * 0.02)) put(x, y, U.hash(x, y, 4) < 0.3 ? '❅' : U.hash(x, y, 4) < 0.6 ? '+' : '·', age < 6 ? '#bfefff' : '#4a7a9a');
       }
     }
-    if (t > 0.7) for (const g of ctx.targets) burst(g, (t - 0.7) / 0.3, ['*'], ['#ffffff', '#7fd8ff'], 3);
+    if (t > 0.7) for (const g of ctx.targets) burst(g, (t - 0.7) / 0.3, ['❆', '✦'], ['#ffffff', '#7fd8ff'], 3);
   } };
 
   S.lightning = { dur: 640, impact: 0.42, draw(t, ctx) {
-    const [first, ...rest] = ctx.targets.length ? ctx.targets : [{ cx: 30, cy: 6 }];
+    const [first, ...rest] = ctx.targets.length ? ctx.targets : [{ cx: 32, cy: 7 }];
     const flick = Math.floor(t * 20) % 2 ? '#ffffff' : '#ffe066';
     if (t < 0.6) {      // bolt from the sky
       let x = first.cx;
-      const bottom = Math.round(lerp(1, first.cy, Math.min(1, t / 0.3)));
-      for (let y = 1; y <= bottom; y++) {
+      const bottom = Math.round(lerp(V.y, first.cy, Math.min(1, t / 0.3)));
+      for (let y = V.y; y <= bottom; y++) {
         const step = U.hash(y, 77) < 0.5 ? -1 : 1;
-        put(x, y, step < 0 ? '/' : '\\', flick);
-        put(x + step, y, step < 0 ? '/' : '\\', '#a08a30');
+        put(x, y, step < 0 ? '╱' : '╲', flick);
+        put(x + step, y, step < 0 ? '╱' : '╲', '#a08a30');
         x += step;
       }
-      if (t > 0.3) burst(first, (t - 0.3) / 0.3, ['*', '+'], ['#ffffff', '#ffe066', '#806020'], 3);
+      if (t > 0.3) burst(first, (t - 0.3) / 0.3, ['✦', '+'], ['#ffffff', '#ffe066', '#806020'], 3);
     }
     if (t > 0.35) {    // arcs jumping to the rest
       const e = Math.min(1, (t - 0.35) / 0.4);
@@ -4585,16 +4817,16 @@ SF._file("src/ui/fx/spells.js");
         const len = Math.round((g.cx - first.cx) * e), dir = Math.sign(len) || 1;
         for (let k = 0; k !== len; k += dir) {
           const y = Math.round(lerp(first.cy, g.cy, Math.abs(k / (g.cx - first.cx)))) + (U.hash(k, 88, Math.floor(t * 12)) < 0.3 ? -1 : 0);
-          put(first.cx + k, y, U.hash(k, 89) < 0.5 ? '~' : '-', flick);
+          put(first.cx + k, y, U.hash(k, 89) < 0.5 ? '∿' : '─', flick);
         }
-        if (e >= 1) burst(g, (t - 0.75) / 0.25, ['*'], ['#ffffff', '#ffe066'], 2);
+        if (e >= 1) burst(g, (t - 0.75) / 0.25, ['✦'], ['#ffffff', '#ffe066'], 2);
       }
     }
   } };
 
   S.beam = { dur: 760, impact: 0.5, draw(t, ctx) {
-    const g = ctx.targets[0] || { cx: 30, cy: 6, x1: 34 };
-    const y = g.cy, px = 58;
+    const g = ctx.targets[0] || { cx: 32, cy: 7, x1: 36 };
+    const y = g.cy, px = X1 - 2;
     const open = Math.min(1, t / 0.25);
     const ring = ['(', '((', '(((' ][Math.min(2, Math.floor(open * 3))];
     for (let dy = -2; dy <= 2; dy++) if (Math.abs(dy) <= Math.ceil(open * 2)) put(px + 1, y + dy, dy === 0 ? 'O' : '|', '#d08bff');
@@ -4603,27 +4835,27 @@ SF._file("src/ui/fx/spells.js");
       const e = Math.min(1, (t - 0.25) / 0.2), end = Math.round(lerp(px - 2, g.cx, e));
       const flick = Math.floor(t * 24) % 2 ? '#ffffff' : '#e8b0ff';
       for (let x = px - 2; x >= end; x--) {
-        put(x, y, '=', flick);
-        if ((x + Math.floor(t * 30)) % 3) { put(x, y - 1, '-', '#a06ad0'); put(x, y + 1, '-', '#a06ad0'); }
+        put(x, y, '█', flick);
+        if ((x + Math.floor(t * 30)) % 3) { put(x, y - 1, '▄', '#a06ad0'); put(x, y + 1, '▀', '#a06ad0'); }
       }
-      if (e >= 1) burst(g, (t - 0.45) / 0.45, ['*', '+', '.'], ['#ffffff', '#d08bff', '#6a3a8a'], 4);
+      if (e >= 1) burst(g, (t - 0.45) / 0.45, ['✦', '+', '·'], ['#ffffff', '#d08bff', '#6a3a8a'], 4);
     }
   } };
 
   S.summon = { dur: 700, impact: 0.8, draw(t) {
     // spirit motes spiral in toward your panel, then a howl
-    const cx = 80, cy = 17;
-    for (let k = 0; k < 14; k++) {
+    const cx = U.SIDE.weapon.cx, cy = U.SIDE.weapon.bottom - 2;
+    for (let k = 0; k < 16; k++) {
       const a = k * 0.9 + t * 7, r = (1 - t) * (4 + (k % 4));
-      U.put(Math.round(cx + Math.cos(a) * r * 2), Math.round(cy + Math.sin(a) * r), k % 3 ? '.' : '*', U.mix('#ffffff', '#d08bff', k / 14));
+      U.put(Math.round(cx + Math.cos(a) * r * 2), Math.round(cy + Math.sin(a) * r), k % 3 ? '·' : '✦', U.mix('#ffffff', '#d08bff', k / 16));
     }
-    if (t > 0.6) U.text(cx - 3, 13, 'AWOOO!', '#d08bff');
+    if (t > 0.6) U.text(cx - 3, cy - 3, 'AWOOO!', '#d08bff');
   } };
 
   S.bolt = { dur: 420, impact: 0.75, draw(t, ctx) {
-    const g = ctx.targets[0] || { cx: 30, cy: 6 };
-    if (t < 0.75) projectile(ctx.from, g, t / 0.75, '*', ['+', '.'], ['#ffffff', '#d08bff', '#6a3a8a']);
-    else burst(g, (t - 0.75) / 0.25, ['*', '.'], ['#ffffff', '#d08bff'], 2);
+    const g = ctx.targets[0] || { cx: 32, cy: 7 };
+    if (t < 0.75) projectile(ctx.from, g, t / 0.75, '✦', ['•', '·'], ['#ffffff', '#d08bff', '#6a3a8a']);
+    else burst(g, (t - 0.75) / 0.25, ['✦', '·'], ['#ffffff', '#d08bff'], 2);
   } };
 })();
 
@@ -4638,7 +4870,9 @@ SF._file("src/ui/fx/enemy.js");
    ===================================================================== */
 (function () {
   const U = SF.UI, S = U.FX.enemy;
-  const clip = (x, y) => x >= 1 && x <= 60 && y >= 1 && y <= 20;
+  const V = U.L.VIEW, X1 = V.x + V.w - 1, Y1 = V.y + V.h - 1;
+  const clip = (x, y) => x >= V.x && x <= X1 && y >= V.y && y <= Y1;
+  const SIDE = () => ({ x: X1 + 1, y: 5 });   // your resources, at the side panel
   const put = (x, y, c, col) => { if (clip(x, y)) U.put(x, y, c, col); };
   const lerp = (a, b, t) => a + (b - a) * t;
   const lunge = (t) => (t > 0.15 && t < 0.6 ? (t > 0.3 && t < 0.5 ? 2 : 1) : 0);
@@ -4648,12 +4882,12 @@ SF._file("src/ui/fx/enemy.js");
     if (t < 0.42 || t > 0.85) return;
     const r = big ? 2 : 1;
     const c = col || '#ff6b6b';
-    put(x, y, '*', '#ffffff');
+    put(x, y, '✦', '#ffffff');
     for (let k = 1; k <= r; k++) {
-      put(x - k * 2, y, '-', c); put(x + k * 2, y, '-', c);
-      put(x, y - k, '|', c); put(x, y + k, '|', c);
-      put(x - k * 2, y - k, '\\', c); put(x + k * 2, y + k, '\\', c);
-      put(x + k * 2, y - k, '/', c); put(x - k * 2, y + k, '/', c);
+      put(x - k * 2, y, '─', c); put(x + k * 2, y, '─', c);
+      put(x, y - k, '│', c); put(x, y + k, '│', c);
+      put(x - k * 2, y - k, '╲', c); put(x + k * 2, y + k, '╲', c);
+      put(x + k * 2, y - k, '╱', c); put(x - k * 2, y + k, '╱', c);
     }
   }
   function particles(from, to, t, ch, col) {
@@ -4673,7 +4907,7 @@ SF._file("src/ui/fx/enemy.js");
       U.ui.shake = Math.max(U.ui.shake, performance.now() + 60);
       for (let k = 0; k < 6; k++) {   // cracks
         const dir = k < 3 ? -1 : 1, len = 3 + Math.floor(U.hash(k, 5) * 5);
-        for (let j = 1; j <= len; j++) put(c.x + dir * (j * 2 + 3), c.y + ((k % 3) - 1) + (j % 2 ? 0 : (k % 3) - 1), j % 2 ? '/' : '\\', '#8a5a3a');
+        for (let j = 1; j <= len; j++) put(c.x + dir * (j * 2 + 3), c.y + ((k % 3) - 1) + (j % 2 ? 0 : (k % 3) - 1), j % 2 ? '╱' : '╲', '#8a5a3a');
       }
     }
   } };
@@ -4681,47 +4915,47 @@ SF._file("src/ui/fx/enemy.js");
     const c = zc(ctx.zone), w = ctx.heavy ? 14 : 10;
     const close = Math.min(1, t / 0.5), open = t > 0.7 ? (t - 0.7) / 0.3 : 0;
     const top = Math.round(lerp(ctx.zone.y0 - 1, c.y - 1, close - open)), bot = Math.round(lerp(ctx.zone.y1 + 1, c.y + 1, close - open));
-    for (let k = -w; k <= w; k += 2) { put(c.x + k, top, 'V', '#ffffff'); put(c.x + k + 1, bot, '^', '#ffffff'); }
+    for (let k = -w; k <= w; k += 2) { put(c.x + k, top, '▼', '#ffffff'); put(c.x + k + 1, bot, '▲', '#ffffff'); }
     if (t > 0.45) impactStar(c.x, c.y, t, ctx.heavy);
   } };
   S.claw = { dur: 380, impact: 0.5, lunge, draw(t, ctx) {
     const c = zc(ctx.zone), n = Math.floor(Math.min(1, t / 0.5) * 6), fade = t > 0.6;
     for (let s = -1; s <= 1; s++) for (let k = 0; k < n; k++) {
-      put(c.x + s * 5 - 6 + k * 2, ctx.zone.y0 + k, '\\', fade ? '#8a2a2a' : k === n - 1 ? '#ffffff' : '#ff5c5c');
+      put(c.x + s * 5 - 6 + k * 2, ctx.zone.y0 + k, '╲', fade ? '#8a2a2a' : k === n - 1 ? '#ffffff' : '#ff5c5c');
     }
   } };
   S.slash = { dur: 400, impact: 0.5, lunge, draw(t, ctx) {
     const c = zc(ctx.zone), n = Math.floor(Math.min(1, t / 0.5) * 14), span = ctx.heavy ? 2 : 1;
     for (let k = 0; k < n; k++) for (let d = 0; d < span; d++) {
-      put(c.x + 14 - k * 2 + d, ctx.zone.y0 - 1 + Math.floor(k / 2), '/', k === n - 1 ? '#ffffff' : t > 0.65 ? '#7a2a2a' : '#ff8080');
+      put(c.x + 14 - k * 2 + d, ctx.zone.y0 + Math.floor(k / 2), '╱', k === n - 1 ? '#ffffff' : t > 0.65 ? '#7a2a2a' : '#ff8080');
     }
   } };
   S.gust = { dur: 460, impact: 0.55, lunge, draw(t, ctx) {
     for (let y = ctx.zone.y0; y <= ctx.zone.y1; y++) {
       const off = Math.floor(t * 80) + y * 7;
-      for (let x = 1; x <= 60; x++) if ((x + off) % 9 < 3) put(x, y, (x + off) % 9 === 1 ? '~' : '-', U.mix('#ffffff', '#5a7a9a', ((x + off) % 9) / 3));
+      for (let x = V.x; x <= X1; x++) if ((x + off) % 9 < 3) put(x, y, (x + off) % 9 === 1 ? '∿' : '─', U.mix('#ffffff', '#5a7a9a', ((x + off) % 9) / 3));
     }
   } };
   S.dread = { dur: 560, impact: 0.5, draw(t, ctx) {
     const col = ctx.color || '#d08bff';
-    for (let y = 1; y <= 20; y++) {
+    for (let y = V.y; y <= Y1; y++) {
       const amp = Math.sin(t * Math.PI);
-      for (let x = 1; x <= 60; x++) {
+      for (let x = V.x; x <= X1; x++) {
         const v = Math.sin(x * 0.35 + y * 0.8 - t * 14);
-        if (v > 1 - amp * 0.5) put(x, y, '~', U.mix(col, '#2a1a3a', 1 - amp));
+        if (v > 1 - amp * 0.5) put(x, y, '∿', U.mix(col, '#2a1a3a', 1 - amp));
       }
     }
   } };
   S.drain = { dur: 520, impact: 0.45, lunge, draw(t, ctx) {
     const c = zc(ctx.zone);
     impactStar(c.x, c.y, Math.min(t, 0.6), false, '#ff6b6b');
-    if (t > 0.4) particles(c, ctx.src, (t - 0.4) / 0.6, '*', '#ff4060');
+    if (t > 0.4) particles(c, ctx.src, (t - 0.4) / 0.6, '•', '#ff4060');
   } };
-  S.sap = { dur: 500, impact: 0.4, draw(t, ctx) { particles({ x: 62, y: 7 }, ctx.src, t, '*', '#5ca8ff'); } };
-  S.steal = { dur: 520, impact: 0.4, lunge, draw(t, ctx) { particles({ x: 62, y: 7 }, ctx.src, t, '$', '#ffd866'); } };
+  S.sap = { dur: 500, impact: 0.4, draw(t, ctx) { particles(SIDE(), ctx.src, t, '◆', '#5ca8ff'); } };
+  S.steal = { dur: 520, impact: 0.4, lunge, draw(t, ctx) { particles(SIDE(), ctx.src, t, '◉', '#ffd866'); } };
   S.guard = { dur: 380, impact: 0.5, draw(t, ctx) {
     const g = ctx.src, col = U.mix('#9fd8ff', '#2a4a6a', Math.max(0, t - 0.5) * 2);
-    U.text(g.cx - 2, g.cy - 1, '.--.', col); U.text(g.cx - 3, g.cy, '| ## |', col); U.text(g.cx - 2, g.cy + 1, "'--'", col);
+    U.text(g.cx - 3, g.cy - 1, '╭────╮', col); U.text(g.cx - 3, g.cy, '│ ▓▓ │', col); U.text(g.cx - 3, g.cy + 1, '╰╮  ╭╯', col); U.text(g.cx - 2, g.cy + 2, '╰──╯', col);
   } };
   S.heal = { dur: 420, impact: 0.5, draw(t, ctx) {
     const g = ctx.src;
@@ -4731,7 +4965,7 @@ SF._file("src/ui/fx/enemy.js");
     const g = ctx.src;
     for (let k = 0; k < 12; k++) {
       const a = k * 0.52 + t * 6, r = 1 + (1 - t) * 3;
-      put(Math.round(g.cx + Math.cos(a) * (g.x1 - g.x0) * 0.4 * r / 2), Math.round(g.cy + Math.sin(a) * r), k % 2 ? '*' : '.', '#ffe066');
+      put(Math.round(g.cx + Math.cos(a) * (g.x1 - g.x0) * 0.4 * r / 2), Math.round(g.cy + Math.sin(a) * r), k % 2 ? '✦' : '·', '#ffe066');
     }
   } };
   S.bolt = { dur: 480, impact: 0.45, draw(t, ctx) {
@@ -4740,7 +4974,7 @@ SF._file("src/ui/fx/enemy.js");
     const flick = Math.floor(t * 18) % 2 ? '#ffffff' : '#ffe066';
     for (let y = ctx.src.bottom + 1; y <= Math.round(lerp(ctx.src.bottom + 1, c.y, Math.min(1, t / 0.4))); y++) {
       const st = U.hash(y, 7) < 0.5 ? -1 : 1;
-      put(x, y, st < 0 ? '/' : '\\', flick);
+      put(x, y, st < 0 ? '╱' : '╲', flick);
       x += st;
     }
     impactStar(c.x, c.y, t, true, '#ffe066');
@@ -4749,7 +4983,7 @@ SF._file("src/ui/fx/enemy.js");
     const z = ctx.zone;
     for (let k = 0; k < 14; k++) {
       const x = z.x0 + 4 + Math.floor(U.hash(k, 71) * (z.x1 - z.x0 - 8)), y = z.y0 + Math.floor((t * 1.5 + U.hash(k, 72)) * 6) % 6;
-      put(x, y, U.hash(k, 73) < 0.5 ? ',' : '.', '#8fdc4f');
+      put(x, y, U.hash(k, 73) < 0.5 ? '•' : '·', '#8fdc4f');
     }
   } };
 })();
@@ -4763,26 +4997,27 @@ SF._file("src/ui/scenes/title.js");
   U.drawTitle = function (now) {
     for (const st of ui.stars) U.put(st.x, Math.floor((st.y0 + now * st.sp) % U.ROWS), st.ch, st.c);
     const logo = U.sprite('logo');
-    logo.frames[0].forEach((ln, k) => U.text(Math.floor((U.COLS - logo.w) / 2), 4 + k, ln, logo.rows[k] || U.C.c));
-    U.center(50, 12, 'Shards are falling. The Veil is cracked. You remember nothing.', U.DIM);
-    let y = 16;
-    U.button(41, y, '{y}[N]{/} New game', 'title:new', U.startCreate, { w: 22 });
+    logo.frames[0].forEach((ln, k) => U.text(Math.floor((U.COLS - logo.w) / 2), 6 + k, ln.join(''), logo.rows[k] || U.C.c));
+    const cx = Math.floor(U.COLS / 2), bx = cx - 11;
+    U.center(cx, 14, 'Shards are falling. The Veil is cracked. You remember nothing.', U.DIM);
+    let y = 19;
+    U.button(bx, y, '{y}[N]{/} New game', 'title:new', U.startCreate, { w: 22 });
     y += 2;
     if (ui.saveInfo) {
-      U.button(41, y, `{y}[C]{/} Continue  {d}${ui.saveInfo}{/}`, 'title:cont', U.loadGame, { w: 22 });
+      U.button(bx, y, `{y}[C]{/} Continue  {d}${ui.saveInfo}{/}`, 'title:cont', U.loadGame, { w: 22 });
       y += 2;
     }
-    U.button(41, y, '{y}[H]{/} How to play', 'title:help', () => (ui.titleHelp = true), { w: 22 });
-    if (ui.msg) U.center(50, 25, ui.msg, U.C.r);
-    U.center(50, 31, 'text only - mouse & keyboard - saves in your browser', '#4a4a58');
+    U.button(bx, y, '{y}[H]{/} How to play', 'title:help', () => (ui.titleHelp = true), { w: 22 });
+    if (ui.msg) U.center(cx, 29, ui.msg, U.C.r);
+    U.center(cx, 37, 'text only · mouse & keyboard · saves in your browser', '#4a4a58');
     if (ui.titleHelp) U.drawHelp();
   };
 
-  const STAR_CH = ['*', '.', '+', "'"], STAR_COL = ['#5fe0e0', '#d08bff', '#ffd866', '#5a5a6a'];
-  for (let k = 0; k < 45; k++) {
+  const STAR_CH = ['✦', '·', '+', '◆', '*'], STAR_COL = ['#5fe0e0', '#d08bff', '#ffd866', '#5a5a6a'];
+  for (let k = 0; k < 60; k++) {
     ui.stars.push({
       x: Math.floor(Math.random() * U.COLS), y0: Math.random() * U.ROWS, sp: 0.0015 + Math.random() * 0.004,
-      ch: STAR_CH[k % 4], c: STAR_COL[Math.floor(Math.random() * 4)],
+      ch: STAR_CH[k % STAR_CH.length], c: STAR_COL[Math.floor(Math.random() * 4)],
     });
   }
 })();
@@ -4823,7 +5058,7 @@ SF._file("src/ui/scenes/create.js");
   };
 
   U.drawCreate = function () {
-    const x = 15, y = 3, w = 70, h = 27, cr = ui.create;
+    const w = 74, h = 27, x = Math.floor((U.COLS - w) / 2), y = 6, cr = ui.create;
     const used = D.stats.reduce((t, st) => t + cr.alloc[st.k], 0), left = R.startPoints - used;
     U.box(x, y, w, h, '{y}A new wanderer{/}', { bg: U.MODAL_BG });
     U.text(x + 3, y + 2, 'Who were you, before the sky cracked?', U.FG);
@@ -4836,7 +5071,7 @@ SF._file("src/ui/scenes/create.js");
       const yy = y + 8 + k * 2, sel = cr.sel === k;
       U.area(x + 2, yy, w - 4, 2, U.region('cr:row:' + k, () => (cr.sel = k)));
       if (sel) U.fillBg(x + 2, yy, w - 4, 2, U.SEL_BG);
-      U.text(x + 3, yy, sel ? '>' : ' ', U.C.y);
+      U.text(x + 3, yy, sel ? '►' : ' ', U.C.y);
       U.text(x + 5, yy, st.name, st.color);
       U.button(x + 16, yy, '{d}[-]{/}', 'cr:-:' + k, () => { cr.sel = k; U.adjustStat(k, -1); });
       U.text(x + 20, yy, String(R.baseStat + cr.alloc[st.k]).padStart(3), U.C.w);
@@ -4853,7 +5088,7 @@ SF._file("src/ui/scenes/create.js");
     if (ui.saveInfo) U.mtext(x + 3, y + 22, `{o}Starting will overwrite your saved game ${ui.saveInfo}.{/}`);
     U.button(x + 3, y + 24, '{y}[Enter]{/} Begin', 'cr:go', U.beginGame);
     U.button(x + 22, y + 24, '{y}[Esc]{/} Back', 'cr:back', () => (ui.screen = 'title'));
-    U.mtext(x + 38, y + 24, '{d}Up/Down pick - Left/Right adjust{/}');
+    U.mtext(x + 38, y + 24, '{d}↑↓ pick · ←→ adjust{/}');
   };
 })();
 
@@ -4861,19 +5096,20 @@ SF._file("src/ui/scenes/explore.js");
 'use strict';
 /* =====================================================================
    SHARDFALL ui - scenes/explore.js
-   The map panel: a 60 x 20 window onto maps of any size (the camera
-   follows you on big maps). Water shimmers and crystals pulse. Moving
+   The map panel: a window onto maps of any size (the camera follows you
+   on big maps; small maps are centered). Tiles get a little random
+   brightness for texture, water shimmers and crystals pulse. Moving
    between altitude levels slides the new map in from above or below.
    ===================================================================== */
 (function () {
   const U = SF.UI, ui = U.ui;
-  const VW = 60, VH = 20;   // viewport inside the panel
+  const V = U.L.VIEW;
 
-  // Camera: top-left map cell shown at panel cell (1,1). Small maps are centered.
+  // Camera: map cell shown at the top-left of the view.
   U.camera = function (s) {
     const m = Engine.map(s), p = s.p;
-    const cx = m.W <= VW ? -Math.floor((VW - m.W) / 2) : Math.max(0, Math.min(m.W - VW, p.x - Math.floor(VW / 2)));
-    const cy = m.H <= VH ? -Math.floor((VH - m.H) / 2) : Math.max(0, Math.min(m.H - VH, p.y - Math.floor(VH / 2)));
+    const cx = m.W <= V.w ? -Math.floor((V.w - m.W) / 2) : Math.max(0, Math.min(m.W - V.w, p.x - Math.floor(V.w / 2)));
+    const cy = m.H <= V.h ? -Math.floor((V.h - m.H) / 2) : Math.max(0, Math.min(m.H - V.h, p.y - Math.floor(V.h / 2)));
     return { x: cx, y: cy, W: m.W, H: m.H };
   };
 
@@ -4886,61 +5122,67 @@ SF._file("src/ui/scenes/explore.js");
     return c.name + (c.hint ? ` {d}(${c.hint}){/}` : '');
   }
 
+  const SHIMMER = { '≈': '~', '∽': '~' };
+  const texCache = {};
+  function texture(col, x, y, vary) {
+    const h = U.hash(x, y, 3), k = col + Math.round(h * 8);
+    return texCache[k] || (texCache[k] = U.mix(col, h < 0.5 ? '#000000' : '#ffffff', Math.abs(Math.round(h * 8) / 8 - 0.5) * 2 * vary));
+  }
+
   U.drawMapPanel = function (now) {
-    const s = ui.s, m = Engine.map(s), p = s.p, vis = Engine.fov(s), seen = Engine.seen(s), cam = U.camera(s);
-    const title = `{c}${m.name}{/} {d}${m.danger}${m.region && m.region.levels.length > 1 ? `  alt ${m.z}` : ''}{/}`;
-    U.box(0, 0, VW + 2, VH + 2, title);
+    const s = ui.s, m = Engine.map(s), p = s.p, vis = Engine.fov(s), seen = Engine.seen(s), cam = U.camera(s), M = U.L.MAP;
+    const title = `{c}${m.name}{/} {d}${m.danger}${m.region && m.region.levels.length > 1 ? `  ·  altitude ${m.z}` : ''}{/}`;
+    U.box(M.x, M.y, M.w, M.h, title);
     const tr = U.anim.view && U.anim.view.trans;
-    // during a level change, slide the map in from where you came
-    // (edge exits just fade in)
-    const off = tr ? Math.round((1 - tr.t) * (tr.dir === 'up' ? VH : tr.dir === 'down' ? -VH : 0)) : 0;
+    // during a level change, slide the map in from where you came (edge exits just fade in)
+    const off = tr ? Math.round((1 - tr.t) * (tr.dir === 'up' ? V.h : tr.dir === 'down' ? -V.h : 0)) : 0;
     const fade = tr && tr.dir === 'edge' ? 1 - tr.t : 0;
-    U.area(1, 1, VW, VH, U.region('map', (sx, sy) => U.walkTo(sx - 1 + cam.x, sy - 1 + cam.y)));
+    U.area(V.x, V.y, V.w, V.h, U.region('map', (sx, sy) => U.walkTo(sx - V.x + cam.x, sy - V.y + cam.y)));
     const shimmer = Math.floor(now / 400);
-    for (let sy = 0; sy < VH; sy++) {
-      for (let sx = 0; sx < VW; sx++) {
+    for (let sy = 0; sy < V.h; sy++) {
+      for (let sx = 0; sx < V.w; sx++) {
         const x = sx + cam.x, y = sy + cam.y + off;
         if (x < 0 || y < 0 || x >= m.W || y >= m.H) continue;
         const i = y * m.W + x;
         if (!seen[i]) continue;
         const c = Engine.cell(s, x, y);
         let g = c.g, col = c.c;
-        if (g === '~' && !c.exit && U.hash(x, y, shimmer) < 0.18) g = '-';
+        if (c.shimmer && !c.exit && U.hash(x, y, shimmer) < 0.18) g = SHIMMER[g] || g;
+        if (c.vary) col = texture(col, x, y, c.vary);
         if (c.glow) col = U.mix(col, '#ffffff', 0.25 + 0.25 * Math.sin(now / 300 + x));
-        const lit = vis[i];
         if (fade) col = U.mix(col, '#0b0b10', fade);
-        U.put(1 + sx, 1 + sy, g, lit ? col : U.dim(col), c.bg ? (lit ? c.bg : U.dim(c.bg)) : null);
+        const lit = vis[i];
+        U.put(V.x + sx, V.y + sy, g, lit ? col : U.dim(col), c.bg ? (lit ? c.bg : U.dim(c.bg)) : null);
       }
     }
     const L = Engine.look(p);
-    if (!tr) U.put(1 + p.x - cam.x, 1 + p.y - cam.y, L.glyph, L.color);
-    if (tr) {   // climb / descend label
-      const verb = tr.dir === 'up' ? '^ climbing ^' : tr.dir === 'down' ? 'v descending v' : '';
-      if (verb) U.center(31, 3, ` ${verb} `, U.C.c, U.BANNER_BG);
+    if (!tr) U.put(V.x + p.x - cam.x, V.y + p.y - cam.y, L.glyph, L.color);
+    if (tr) {
+      const verb = tr.dir === 'up' ? '▲ climbing ▲' : tr.dir === 'down' ? '▼ descending ▼' : '';
+      if (verb) U.center(V.x + V.w / 2, V.y + 2, ` ${verb} `, U.C.c, U.BANNER_BG);
     }
 
-    // hover: path preview + description
+    // hover: path preview + description along the bottom border
     const hc = ui.hover === 'map' && ui.hcell;
     if (hc && s.scene === 'explore' && !ui.overlay && !tr) {
-      const tx = hc.x - 1 + cam.x, ty = hc.y - 1 + cam.y, path = Engine.path(s, tx, ty);
+      const tx = hc.x - V.x + cam.x, ty = hc.y - V.y + cam.y, path = Engine.path(s, tx, ty);
       if (path) {
         let x = p.x, y = p.y;
-        for (const [dx, dy] of path) { x += dx; y += dy; U.fillBg(1 + x - cam.x, 1 + y - cam.y, 1, 1, '#1b2833'); }
+        for (const [dx, dy] of path) { x += dx; y += dy; U.fillBg(V.x + x - cam.x, V.y + y - cam.y, 1, 1, '#1b2833'); }
       }
       U.fillBg(hc.x, hc.y, 1, 1, U.HOVER_BG);
       const info = tileInfo(s, tx, ty);
-      if (info) { const t = ` ${info} `; U.mtext(VW + 1 - U.plainLen(t), VH + 1, t); }
+      if (info) { const t = ` ${info} `; U.mtext(M.x + M.w - 2 - U.plainLen(t), M.y + M.h - 1, t); }
     }
-    // scroll hints on big maps
-    if (cam.y > 0) U.text(VW - 6, 1, ' more ^', U.DIM);
-    if (cam.y + VH < m.H) U.text(VW - 6, VH, ' more v', U.DIM);
+    if (cam.y > 0) U.small(V.x + V.w - 5, V.y, 'more ▲', U.DIM);
+    if (cam.y + V.h < m.H) U.small(V.x + V.w - 5, V.y + V.h - 0.5, 'more ▼', U.DIM);
 
     // floats pinned to map tiles
     for (const f of ui.floats) {
       if (f.mx == null || (f.map && f.map !== m.id)) continue;
       const t = (now - f.t0) / f.dur;
       if (t >= 1) continue;
-      U.center(1 + f.mx - cam.x, f.my - cam.y - Math.floor(t * 2), f.text, f.color, U.BANNER_BG);
+      U.center(V.x + f.mx - cam.x, V.y + f.my - cam.y - 1 - Math.floor(t * 2), f.text, f.color, U.BANNER_BG);
     }
   };
 })();
@@ -4949,113 +5191,144 @@ SF._file("src/ui/scenes/side.js");
 'use strict';
 /* =====================================================================
    SHARDFALL ui - scenes/side.js
-   The character panel on the right. While exploring its lower half
-   shows quests and an altitude gauge; in combat it shows your weapon,
-   which lunges at the enemies when you strike.
+   The character panel (top right).
+     rows 1-8    name, level, HP / ST / SP / SAN, gold, conditions
+     rows 10-16  exploring: quests | altitude gauge
+                 in combat: what you know about the target | your status
+     rows 17-24  your weapon (it lunges at enemies when you strike)
    ===================================================================== */
 (function () {
   const U = SF.UI, ui = U.ui, D = SF.data;
-  const X0 = 62, W = 38, x = X0 + 2;
+  const B = U.L.SIDE, x = B.x + 2, W = B.w - 4, colR = x + 31, colW = 27;
 
   // Where effects aimed at "you" should go.
-  U.SIDE = { hpX: X0 + 12, hpY: 3, anchor: () => ({ x: 61, y: 16 }) };
+  U.SIDE = {
+    hpX: x + 22, hpY: 3,
+    anchor: () => ({ x: U.L.VIEW.x + U.L.VIEW.w, y: 20 }),    // spells leave from the right edge of the view
+    weapon: { cx: x + 29, bottom: 22 },
+  };
 
   function resRow(y, label, val, max, color, brink) {
+    const bw = 38;
     U.text(x, y, label, U.DIM);
     if (val < 0 && brink) {   // below zero: how close you are to falling
-      const depth = Math.round(Math.min(1, -val / brink) * 18);
-      for (let k = 0; k < 18; k++) U.put(x + 4 + k, y, k < depth ? '#' : '-', k < depth ? '#b02040' : '#3a1a22');
-    } else U.bar(x + 4, y, 18, val, max, color);
-    U.text(x + 23, y, `${val}/${max}`, val <= 0 ? U.C.r : U.FG);
+      const depth = Math.round(Math.min(1, -val / brink) * bw);
+      for (let k = 0; k < bw; k++) U.put(x + 5 + k, y, k < depth ? '━' : '─', k < depth ? '#d02848' : '#3a1a22');
+    } else U.bar(x + 5, y, bw, val, max, color);
+    U.text(x + 5 + bw + 2, y, `${val}`, val <= 0 ? U.C.r : U.FG);
+    U.small(x + 5 + bw + 2 + String(val).length, y + 0.5, `/${max}`, U.DIM);
   }
 
   U.drawSide = function (now) {
     const s = ui.s, p = s.p, d = Engine.derived(p), L = Engine.look(p);
-    U.box(X0, 0, W, 22, 'Character');
+    U.box(B.x, B.y, B.w, B.h, 'Character');
     U.put(x, 1, L.glyph, L.color);
     U.text(x + 2, 1, p.name, L.color);
-    U.text(X0 + W - 2 - L.title.length, 1, L.title, U.DIM);
+    U.text(B.x + B.w - 3 - [...L.title].length, 1, L.title, U.DIM);
     const need = Engine.xpNeed(p.lvl);
     U.text(x, 2, `Lv ${p.lvl}`, U.C.y);
-    U.bar(x + 7, 2, 16, p.xp, need, '#a07cff');
-    U.text(x + 24, 2, `${p.xp}/${need}`, U.DIM);
+    U.bar(x + 7, 2, 36, p.xp, need, '#a07cff');
+    U.small(x + 45, 2.5, `${p.xp} / ${need} xp`, U.DIM);
 
     const php = U.anim.php(s), flash = now < ui.pflash;
     resRow(3, 'HP', php, d.maxHp, flash ? U.C.w : U.hpColor(php / d.maxHp), d.brink);
     resRow(4, 'ST', p.st, d.maxSt, '#7ddc6f');
     resRow(5, 'SP', p.sp, d.maxSp, '#5ca8ff');
     resRow(6, 'SAN', p.san, d.maxSan, '#c792ea');
-    U.mtext(x, 7, `{y}Gold{/} ${U.anim.gold(s)}`);
-    U.mtext(x + 16, 7, `{m}Shards{/} ${p.shards}`);
-    U.mtext(x, 8, `{d}Weapon{/} ${D.weapons[p.weapon].name} {d}(${d.dmgMin}-${d.dmgMax}){/}`, U.FG, null, null, 34);
+    U.mtext(x, 7, `{y}◉ Gold{/} ${U.anim.gold(s)}`);
+    U.mtext(x + 16, 7, `{m}◇ Shards{/} ${p.shards}`);
+    U.mtext(x + 33, 7, `{c}Π Stones{/} ${p.stones || 0}`);
     let cx = x;
-    for (const c of Engine.conditions(s)) cx += U.text(cx, 9, c.name, c.color) + 1;
-    if (p.points > 0 && cx < x + 20) {
-      U.button(cx, 9, `{y}* ${p.points} point${p.points > 1 ? 's' : ''}{/} {d}[C]{/}`, 'side:pts', () => U.openOverlay('char'));
-    }
-    if (U.anim.scene(s) === 'combat') drawWeapon(now);
+    for (const c of Engine.conditions(s)) cx += U.text(cx, 8, c.name, c.color) + 1;
+    if (p.points > 0) U.button(cx, 8, `{y}★ ${p.points} stat point${p.points > 1 ? 's' : ''} to spend{/} {d}[C]{/}`, 'side:pts', () => U.openOverlay('char'));
+
+    if (U.anim.scene(s) === 'combat') drawCombatInfo(now);
     else drawExplore();
+    drawWeapon(now);
 
     // floats aimed at the side panel
     for (const f of ui.floats) {
-      if (f.mx != null || f.x < X0) continue;
+      if (f.mx != null || f.x < B.x) continue;
       const t = (now - f.t0) / f.dur;
-      if (t < 1) U.text(Math.min(X0 + W - 2 - f.text.length, f.x), f.y - (t > 0.6 ? 1 : 0), f.text, f.color, U.BANNER_BG);
+      if (t < 1) U.text(Math.min(B.x + B.w - 2 - [...f.text].length, f.x), f.y - (t > 0.6 ? 1 : 0), f.text, f.color, U.BANNER_BG);
     }
   };
 
   function drawExplore() {
     const s = ui.s, p = s.p;
-    U.rule(x, 10, 34, 'Quests');
+    U.rule(x, 10, colW + 1, 'Quests');
     const rq = U.region('side:quests', () => U.openOverlay('quests'));
     const qs = Engine.questLog(s).filter((q) => q.status !== 'done');
     let y = 11;
-    if (!qs.length) U.mtext(x, y, p.flags.chapter1 ? '{y}Chapter I complete.{/} {d}Explore freely.{/}' : '{d}Talk to people to find work.{/}', U.FG, null, rq);
-    for (const q of qs) {
-      const t = `${q.status === 'ready' ? '{y}!{/}' : '{c}-{/}'} ${q.short}` +
-        (q.progress && q.status === 'active' ? ` {d}${q.progress}{/}` : '') + (q.status === 'ready' ? ' {y}(return){/}' : '');
-      for (const ln of U.wrap(t, 34, U.FG)) { if (y > 13) break; U.drawLine(x, y++, ln, null, rq); }
+    if (!qs.length) {
+      const t = p.flags.chapter1 ? '{y}Chapter I complete.{/} {d}Explore freely.{/}' : '{d}Talk to people to find work.{/}';
+      for (const ln of U.wrap(t, colW, U.FG)) U.drawLine(x, y++, ln, null, rq);
     }
-    drawWhere(15);
+    for (const q of qs) {
+      const t = `${q.status === 'ready' ? '{y}!{/}' : '{c}•{/}'} ${q.short}` +
+        (q.progress && q.status === 'active' ? ` {d}${q.progress}{/}` : '') + (q.status === 'ready' ? ' {y}(return){/}' : '');
+      for (const ln of U.wrap(t, colW, U.FG)) { if (y > 16) break; U.drawLine(x, y++, ln, null, rq); }
+    }
+    drawWhere();
   }
 
   // Altitude gauge for vertical regions, area info otherwise.
-  function drawWhere(y0) {
+  function drawWhere() {
     const s = ui.s, m = Engine.map(s), reg = m.region;
-    U.rule(x, y0 - 1, 34, reg ? reg.name : m.name, U.C.c);
+    U.rule(colR, 10, colW, reg ? reg.name : m.name, U.C.c);
     if (reg && reg.levels.length > 1) {
       const lv = reg.levels, k0 = lv.indexOf(m.id);
       lv.forEach((mk, k) => {
-        const here = k === k0, mm = Engine.data.maps[mk], known = ui.s.p.visited[mk];
-        let icon;
-        if (reg.shape === 'mountain') icon = ' '.repeat(lv.length - 1 - k) + '/' + ' '.repeat(k * 2) + '\\';
-        else icon = ' '.repeat(k * 3) + (k ? '|' : '') + '___';
-        const col = here ? U.C.y : known ? '#8a8a96' : '#3a3a4a';
-        U.text(x, y0 + k, icon, here ? U.C.c : '#5a5a6a');
-        U.text(x + 10, y0 + k, known ? mm.name.replace(reg.name + ' ', '').replace('Hollow ', '') : '???', col);
-        if (here) U.text(x + 26, y0 + k, '< you', U.C.y);
+        const here = k === k0, mm = D.maps[mk], known = s.p.visited[mk];
+        const icon = reg.shape === 'mountain'
+          ? ' '.repeat(lv.length - 1 - k) + '╱' + ' '.repeat(k * 2) + '╲'
+          : ' '.repeat(k * 2) + (k ? '└' : '─') + '──';
+        U.text(colR, 11 + k, icon, here ? U.C.c : '#5a5a6a');
+        U.text(colR + 9, 11 + k, known ? mm.name.replace(reg.name + ' ', '').replace('Hollow ', '') : '???', here ? U.C.y : known ? '#8a8a96' : '#3a3a4a');
+        if (here) U.text(colR + 22, 11 + k, '◄ you', U.C.y);
       });
     } else {
-      U.mtext(x, y0, `{d}${m.safe ? 'Safe. Rest and resupply here.' : 'Danger: ' + m.danger}{/}`);
+      for (const [k, ln] of U.wrap(`{d}${m.safe ? 'Safe. Rest and resupply here.' : 'Danger: ' + m.danger}{/}`, colW).entries()) U.drawLine(colR, 11 + k, ln);
     }
-    U.mtext(x, y0 + 5, `{d}explored ${Math.round(Engine.explored(s) * 100)}%  -  standing stones ${ui.s.p.stones || 0}{/}`);
+    U.small(colR, 16, `explored ${Math.round(Engine.explored(s) * 100)}%`, U.DIM);
+  }
+
+  // In combat the middle shows what you know about your target.
+  function drawCombatInfo() {
+    const s = ui.s, c = U.anim.combat(s), t = c && c.enemies[ui.target];
+    U.rule(x, 10, colW + 1, 'Target');
+    if (t && t.hp > 0) {
+      const def = D.enemies[t.key], j = (s.p.journal || {})[t.key] || { el: {}, kills: 0 };
+      U.text(x, 11, t.name, def.color);
+      U.small(x, 12, `Level ${def.lvl || 1}${j.kills ? `   ATK ${t.atk}   DEF ${t.def}` : '   (defeat one to learn more)'}`, U.DIM);
+      const el = (ids) => ids.map((k) => `{${D.elements[k].color}}${D.elements[k].name}{/}`).join(', ');
+      const weak = Object.keys(j.el).filter((k) => j.el[k] === 'weak'), res = Object.keys(j.el).filter((k) => j.el[k] === 'resist');
+      U.mtext(x, 13, `{d}Weak:{/} ${weak.length ? el(weak) : '{d}?{/}'}`, U.FG, null, null, colW);
+      U.mtext(x, 14, `{d}Resists:{/} ${res.length ? el(res) : '{d}?{/}'}`, U.FG, null, null, colW);
+      if (t.guard) U.small(x, 15, 'guarding: half damage this turn', '#5ca8ff');
+      if (t.next) U.small(x, 15.5, 'winding up: DEFEND next turn!', '#ffe066');
+    }
+    U.rule(colR, 10, colW, 'You');
+    let y = 11;
+    for (const cd of Engine.conditions(s)) { U.mtext(colR, y, `{${cd.color}}${cd.name}{/}`); U.small(colR + cd.name.length + 1, y + 0.5, cd.desc, U.DIM, null, 2 * (colW - cd.name.length - 1)); y++; if (y > 15) break; }
+    if (y === 11) U.small(colR, 11.5, 'no conditions', U.DIM);
+    if (c && c.hound) {
+      const h = c.hound;
+      U.mtext(colR, 16, '{m}Hound{/}');
+      U.bar(colR + 6, 16, 10, h.hp, h.maxHp, '#d08bff');
+      U.small(colR + 17, 16.5, `${h.hp}hp · ${h.turns} turns`, U.DIM);
+    }
   }
 
   function drawWeapon(now) {
-    const s = ui.s, p = s.p, w = D.weapons[p.weapon], d = Engine.derived(p), c = U.anim.combat(s);
-    U.rule(x, 10, 34, w.name, U.C.w);
+    const s = ui.s, p = s.p, w = D.weapons[p.weapon], d = Engine.derived(p), W2 = U.SIDE.weapon;
+    U.rule(x, 17, W, w.name, U.C.w);
     const lunge = U.anim.view ? U.anim.view.wlunge || 0 : 0;
-    U.drawSprite(w.sprite || p.weapon, X0 + 19 - Math.round(lunge * 6), 15 - Math.round(lunge), { color: U.FG, clip: { x0: X0 + 1, y0: 11, x1: X0 + W - 2, y1: 16 } });
+    U.drawSprite(w.sprite || p.weapon, W2.cx - Math.round(lunge * 7), W2.bottom - Math.round(lunge), { color: U.FG, clip: { x0: B.x + 1, y0: 18, x1: B.x + B.w - 2, y1: 22 } });
     const T = w.timing || {};
-    U.mtext(x, 17, `{d}Dmg{/} ${d.dmgMin}-${d.dmgMax}  {d}Crit{/} ${U.pct(d.crit)}  {d}${T.sweep < 750 ? 'fast' : T.sweep > 1000 ? 'slow' : 'steady'} swing{/}`);
-    if (w.el && w.el !== 'phys') U.mtext(x, 18, `{d}Element:{/} {${D.elements[w.el].color}}${D.elements[w.el].name}{/}${w.burn ? ` {d}(${Math.round(w.burn * 100)}% burn){/}` : ''}`);
-    if (c && c.hound) {
-      const h = c.hound;
-      U.mtext(x, 19, '{m}Hound{/}');
-      U.bar(x + 6, 19, 10, h.hp, h.maxHp, '#d08bff');
-      U.mtext(x + 17, 19, `{d}${h.hp}hp ${h.turns} turns{/}`);
-    }
-    if (ui.lastQ && now < (ui.lastQt || 0)) U.text(x, 20, ui.lastQ.toUpperCase() + '!', ui.lastQ === 'perfect' ? U.C.y : U.DIM);
+    U.mtext(x, 23, `{d}Dmg{/} ${d.dmgMin}-${d.dmgMax}  {d}Crit{/} ${U.pct(d.crit)}  {d}${T.sweep < 750 ? 'fast' : T.sweep > 1000 ? 'slow' : 'steady'} swing{/}` +
+      (w.el && w.el !== 'phys' ? `  {${D.elements[w.el].color}}${D.elements[w.el].name}{/}${w.burn ? ` {d}${Math.round(w.burn * 100)}% burn{/}` : ''}` : ''));
+    if (ui.lastQ && now < (ui.lastQt || 0)) U.text(x, 24, ui.lastQ === 'perfect' ? '★ PERFECT STRIKE ★' : ui.lastQ === 'good' ? 'good hit' : 'clumsy swing', ui.lastQ === 'perfect' ? U.C.y : U.DIM);
   }
 })();
 
@@ -5063,11 +5336,12 @@ SF._file("src/ui/scenes/log.js");
 'use strict';
 /* =====================================================================
    SHARDFALL ui - scenes/log.js
-   The message log (revealed in step with combat animations) and the
-   hint bar along the bottom of the screen.
+   The message log (revealed in step with combat animations), the hint
+   bar along the bottom, and the big centered banners.
    ===================================================================== */
 (function () {
   const U = SF.UI, ui = U.ui;
+  const B = U.L.LOG, TW = B.w - 6, ROWS = B.h - 2;
   let cache = { len: -1, from: -1, last: null, lines: [] };
 
   function logLines(s, upto) {
@@ -5076,7 +5350,7 @@ SF._file("src/ui/scenes/log.js");
     const lines = [];
     for (let i = Math.max(0, upto - 60); i < upto; i++) {
       const fresh = i >= ui.newFrom;
-      U.wrap(L[i], U.COLS - 6, fresh ? U.FG : '#8a8a96').forEach((ln, k) => lines.push({ ln, mark: k === 0 && fresh ? '>' : ' ' }));
+      U.wrap(L[i], TW, fresh ? U.FG : '#8a8a96').forEach((ln, k) => lines.push({ ln, mark: k === 0 && fresh ? '›' : ' ' }));
     }
     cache = { arr: L, len: upto, from: ui.newFrom, last, lines };
     return lines;
@@ -5084,53 +5358,127 @@ SF._file("src/ui/scenes/log.js");
 
   U.drawLog = function () {
     const s = ui.s;
-    U.box(0, 22, U.COLS, 11, 'Log');
-    const lines = logLines(s, Math.min(s.log.length, U.anim.logN(s))), rows = 9;
-    ui.logScroll = Math.max(0, Math.min(ui.logScroll, lines.length - rows));
-    const top = Math.max(0, lines.length - rows - ui.logScroll);
-    for (let r = 0; r < rows && top + r < lines.length; r++) {
+    U.box(B.x, B.y, B.w, B.h, 'Log');
+    const lines = logLines(s, Math.min(s.log.length, U.anim.logN(s)));
+    ui.logScroll = Math.max(0, Math.min(ui.logScroll, lines.length - ROWS));
+    const top = Math.max(0, lines.length - ROWS - ui.logScroll);
+    for (let r = 0; r < ROWS && top + r < lines.length; r++) {
       const l = lines[top + r];
-      U.put(2, 23 + r, l.mark, U.C.y);
-      U.drawLine(3, 23 + r, l.ln);
+      U.put(B.x + 2, B.y + 1 + r, l.mark, U.C.y);
+      U.drawLine(B.x + 3, B.y + 1 + r, l.ln);
     }
-    if (ui.logScroll > 0) U.text(U.COLS - 22, 32, ` v ${ui.logScroll} newer lines `, U.C.y);
+    if (ui.logScroll > 0) U.text(B.x + B.w - 22, B.y + B.h - 1, ` ▼ ${ui.logScroll} newer lines `, U.C.y);
   };
 
   U.drawBar = function () {
-    const s = ui.s;
+    const s = ui.s, y = U.L.BAR;
     let x = 1;
-    const btn = (label, key, fn) => { x += U.button(x, 33, label, 'bar:' + key, fn) + 2; };
-    const hint = (t) => U.mtext(x, 33, `{d}${t}{/}`);
+    const btn = (label, key, fn) => { x += U.button(x, y, label, 'bar:' + key, fn) + 2; };
+    const hint = (t) => U.mtext(x, y, `{d}${t}{/}`);
     if (U.anim.busy()) return hint('[Space] or click to skip');
     switch (s.scene) {
       case 'explore':
-        btn('{y}[I]{/}tems', 'inv', () => U.openOverlay('inv'));
+        btn('{y}[I]{/}nventory', 'inv', () => U.openOverlay('inv'));
         btn('{y}[C]{/}haracter', 'char', () => U.openOverlay('char'));
         btn('{y}[J]{/}ournal', 'journal', () => U.openOverlay('journal'));
         btn('{y}[Q]{/}uests', 'quests', () => U.openOverlay('quests'));
         btn('{y}[O]{/}utfits', 'outfit', () => U.openOverlay('outfit'));
-        btn('{y}[?]{/}', 'help', () => U.openOverlay('help'));
+        btn('{y}[?]{/} Help', 'help', () => U.openOverlay('help'));
         btn('{y}[Esc]{/} Menu', 'menu', () => U.openOverlay('menu'));
-        hint('click map to walk');
+        hint('click the map to walk · [1-8] use hotbar items');
         break;
       case 'combat':
         hint(ui.timing ? '[Space], [Enter] or click when the marker is in the gold zone'
-          : '[1-6] choose - [Tab] or click an enemy to target - [0]/[Esc] back - wheel scrolls the log');
+          : '[1-6] choose · [Tab] or click an enemy to target · [0]/[Esc] back · click a Pack item to use it');
         break;
-      case 'dialog': hint('[1-9] or click to answer - Up/Down + Enter - [Esc] leave'); break;
-      case 'shop': hint('[1-9] buy or sell - [Tab] switch tab - [Esc] leave'); break;
-      case 'shrine': hint('[1] echo x1 - [2] echo x10 - [O] outfits - [Esc] leave'); break;
+      case 'dialog': hint('[1-9] or click to answer · ↑↓ + Enter · [Esc] leave'); break;
+      case 'shop': hint('[1-9] buy or sell · [Tab] switch tab · [Esc] leave'); break;
+      case 'shrine': hint('[1] echo ×1 · [2] echo ×10 · [O] outfits · [Esc] leave'); break;
       case 'gameover': hint('[R] rise again'); break;
     }
   };
 
+  // Big centered message over the map / combat view.
+  U.bannerAt = function (text, color) {
+    const V = U.L.VIEW, t = `   ${text}   `, w = [...t].length, x = V.x + Math.floor((V.w - w) / 2), y = V.y + Math.floor(V.h / 2) - 2;
+    U.text(x, y - 1, ' '.repeat(w), U.FG, U.BANNER_BG);
+    U.text(x, y, t, color, U.BANNER_BG);
+    U.text(x, y + 1, ' '.repeat(w), U.FG, U.BANNER_BG);
+  };
   U.drawBanner = function (now) {
     const b = ui.banner;
-    if (!b || now >= b.until) return;
-    const t = `   ${b.text}   `, x = 1 + Math.floor((60 - t.length) / 2), y = 10;
-    U.text(x, y - 1, ' '.repeat(t.length), U.FG, U.BANNER_BG);
-    U.text(x, y, t, b.color, U.BANNER_BG);
-    U.text(x, y + 1, ' '.repeat(t.length), U.FG, U.BANNER_BG);
+    if (b && now < b.until) U.bannerAt(b.text, b.color);
+  };
+})();
+
+SF._file("src/ui/scenes/pack.js");
+'use strict';
+/* =====================================================================
+   SHARDFALL ui - scenes/pack.js
+   Inventory slots, shared by the Pack panel (bottom right, always
+   visible: the first 16 slots, a Minecraft-style hotbar) and the full
+   inventory screen (overlays/inventory.js).
+
+     U.drawSlot(x, y, w, h, info, opt)   one slot: frame, icon, tiny count/label
+     U.itemAction(info)                  what clicking a slot does here (use / equip)
+   ===================================================================== */
+(function () {
+  const U = SF.UI, ui = U.ui, D = SF.data;
+  const B = U.L.PACK, SW = 6, SH = 4, PER_ROW = 8, SHOWN = 16;
+
+  const kindColor = (info) => (info.kind === 'weapon' ? '#ffb347' : '#9fd8a0');
+
+  // One slot. opt: hot (hovered), sel (keyboard cursor), held (being carried: drawn faded),
+  //               key (tiny hotkey number), label (tiny name), region
+  U.drawSlot = function (x, y, w, h, info, opt = {}) {
+    const col = opt.sel ? '#ffd866' : opt.hot ? '#8a8aa8' : '#34344a', bg = opt.hot ? '#1a1a28' : '#101018';
+    U.fillBg(x + 1, y + 1, w - 2, h - 2, bg);
+    U.put(x, y, '┌', col); U.put(x + w - 1, y, '┐', col); U.put(x, y + h - 1, '└', col); U.put(x + w - 1, y + h - 1, '┘', col);
+    for (let k = 1; k < w - 1; k++) { U.put(x + k, y, '─', col); U.put(x + k, y + h - 1, '─', col); }
+    for (let k = 1; k < h - 1; k++) { U.put(x, y + k, '│', col); U.put(x + w - 1, y + k, '│', col); }
+    if (opt.region != null) U.area(x, y, w, h, opt.region);
+    if (opt.key) U.small(x + 1, y, opt.key, opt.sel || opt.hot ? col : '#6a6a80');   // tiny hotkey, set into the top border
+    if (!info) return;
+    const iconRows = opt.label ? h - 3 : h - 2;
+    U.drawSprite(info.icon, x + Math.floor((w - 1) / 2), y + iconRows, { dim: opt.held, region: opt.region });
+    if (info.count > 1) U.small(x + w - 1 - String(info.count).length / 2, y + h - 2 + 0.5, String(info.count), '#ffffff');
+    if (opt.label) U.small(x + 1, y + h - 2, U.pad(info.name, (w - 2) * 2 - (info.count > 1 ? 3 : 0)), opt.held ? U.DIM : '#a8a8b8');
+  };
+
+  // Clicking an item outside the full inventory: use it, or equip a weapon.
+  U.itemAction = function (info) {
+    const s = ui.s;
+    if (!info || U.anim.busy() || ui.timing) return;
+    if (info.kind === 'weapon') {
+      if (s.scene === 'combat') { Engine.note(s, '{d}You can\'t change weapons mid-fight.{/}'); return; }
+      U.doAction({ type: 'equip', id: info.id });
+    } else if (s.scene === 'combat') U.doCombat({ type: 'use', id: info.id });
+    else U.doAction({ type: 'use', id: info.id });
+  };
+
+  U.drawPack = function () {
+    const s = ui.s, bag = Engine.bag(s);
+    U.box(B.x, B.y, B.w, B.h, 'Pack');
+    U.button(B.x + B.w - 18, B.y, '{y}[I]{/} full inventory', 'pack:open', () => U.openOverlay('inv'));
+    let hot = null;
+    for (let k = 0; k < SHOWN; k++) {
+      const sx = B.x + 1 + (k % PER_ROW) * SW, sy = B.y + 1 + Math.floor(k / PER_ROW) * SH, info = bag[k], key = 'pack:' + k;
+      const r = U.region(key, () => U.itemAction(info), () => U.itemAction(info));
+      if (U.hovered(key)) hot = info;
+      U.drawSlot(sx, sy, SW, SH, info, { hot: U.hovered(key), key: k < PER_ROW ? String(k + 1) : null, region: r });
+    }
+    // details of the hovered slot
+    const y0 = B.y + 1 + 2 * SH, x0 = B.x + 2, w = B.w - 4;
+    if (hot) {
+      U.mtext(x0, y0, `{${kindColor(hot)}}${hot.name}{/}${hot.count > 1 ? ` {d}×${hot.count}{/}` : ''}`);
+      U.wrap(hot.desc, w * 2, U.DIM).slice(0, 4).forEach((ln, k) => U.drawSmallLine(x0, y0 + 1 + k / 2, ln));
+      const verb = hot.kind === 'weapon' ? 'click: equip' : s.scene === 'combat' ? 'click: use (takes your turn)' : 'click: use';
+      U.small(x0, y0 + 3.5, verb, '#8a8aa8');
+    } else {
+      const free = bag.filter((b) => !b).length;
+      U.small(x0, y0 + 0.5, 'Hover a slot for details. Click to use or equip.', U.DIM);
+      U.small(x0, y0 + 1.5, `[1-8] use the top row · [I] arrange everything · ${free} free slots`, U.DIM);
+    }
   };
 })();
 
@@ -5138,20 +5486,21 @@ SF._file("src/ui/scenes/combat.js");
 'use strict';
 /* =====================================================================
    SHARDFALL ui - scenes/combat.js
-   The combat panel (left 62 columns):
-     row 1      move callouts          rows 2-9   enemy sprites
-     row 10     names                  row 11     HP bars
-     row 12     INTENT: what each enemy will do next turn
-     row 13     status (burning, frozen, guarding, stolen gold)
-     rows 15-20 your menu, or the strike bar (scenes/timing.js)
+   The combat panel (the map panel's space, 64 x 24 inside):
+     row 1      move callouts          rows 2-11  enemy sprites
+     row 12     names                  row 13     HP bars
+     row 14     INTENT: what each enemy will do next turn
+     row 15     status, in tiny text (burning, guarding, stolen gold)
+     rows 17-24 your menu, or the strike bar (scenes/timing.js)
    ===================================================================== */
 (function () {
   const U = SF.UI, ui = U.ui, D = SF.data;
-  U.ZONE = { x0: 1, y0: 15, x1: 60, y1: 20 };   // where enemy attacks "hit the camera"
-  const ART_BOTTOM = 9;
+  const V = U.L.VIEW, M = U.L.MAP;
+  U.ZONE = { x0: V.x, y0: 17, x1: V.x + V.w - 1, y1: V.y + V.h - 1 };   // where enemy attacks "hit the camera"
+  const ART_BOTTOM = 11, NAME = 12, HPROW = 13, INTENT_ROW = 14, TAGS = 15, SEP = 16, MENU = 17;
 
   U.combatGeo = function (c, i) {
-    const n = c ? c.enemies.length : 1, slot = Math.floor(60 / n), sx = 1 + i * slot, cx = sx + Math.floor(slot / 2);
+    const n = c ? c.enemies.length : 1, slot = Math.floor(V.w / n), sx = V.x + i * slot, cx = sx + Math.floor(slot / 2);
     const e = c && c.enemies[i], sp = e ? U.sprite(D.enemies[e.key].sprite || e.key) : null;
     const h = sp ? sp.h : 5, w = sp ? sp.w : 10, top = ART_BOTTOM - h + 1;
     return { cx, cy: Math.round((top + ART_BOTTOM) / 2), top, bottom: ART_BOTTOM, x0: cx - Math.floor(w / 2), x1: cx - Math.floor(w / 2) + w - 1, sx, slot };
@@ -5168,7 +5517,7 @@ SF._file("src/ui/scenes/combat.js");
     const first = D.enemies[c.enemies[0].key];
     const title = c.boss ? `{r}BOSS{/}  ${first.name}` : `{r}Combat{/} {d}round ${c.round}{/}`;
     const hurt = now < ui.pflash;
-    U.box(0, 0, 62, 22, title, hurt ? { color: '#ff5c5c' } : {});
+    U.box(M.x, M.y, M.w, M.h, title, hurt ? { color: '#ff5c5c' } : {});
     const sx = now < ui.shake ? (Math.floor(now / 35) % 2 ? 1 : -1) : 0;
     const intro = view && view.intro != null ? view.intro : null;
 
@@ -5179,27 +5528,28 @@ SF._file("src/ui/scenes/combat.js");
       const hp = U.anim.ehp(i, e), alive = !gone && hp > 0 || dissolve > 0;
       const sel = !gone && hp > 0 && i === ui.target, hot = !gone && U.hovered('enemy:' + i);
       const r = U.region('enemy:' + i, () => { if (!gone && hp > 0) ui.target = i; });
-      if (!gone) U.area(g.sx, 1, g.slot, 13, r);
+      if (!gone) U.area(g.sx, V.y, g.slot, TAGS, r);
 
       if (alive || dissolve) {
         const flash = view && now < (view.flash[i] || 0) ? '#ffffff' : null;
         let col = def.color;
         if (e.frozen > 0) col = '#a8e4ff';
         if (e.next) col = U.mix(def.color, '#ffe066', 0.35 + 0.35 * Math.sin(now / 120));   // winding up
-        const dy = (view && view.lunge[i] || 0) + (intro != null ? -Math.round((1 - intro) * 9) : 0);
+        const dy = (view && view.lunge[i] || 0) + (intro != null ? -Math.round((1 - intro) * 11) : 0);
         U.drawSprite(def.sprite || e.key, cx + sx, ART_BOTTOM, {
           color: col, now: now + i * 230, flash, dissolve, dy, region: gone ? null : r,
-          clip: { x0: g.sx, y0: 1, x1: g.sx + g.slot - 1, y1: 13 },
+          clip: { x0: g.sx, y0: V.y, x1: g.sx + g.slot - 1, y1: TAGS },
         });
       }
       if (intro != null && intro < 0.6) return;
-      if (gone) { U.center(cx, 10, e.name, '#44444e'); U.center(cx, 11, 'slain', '#44444e'); return; }
-      const name = sel ? `> ${e.name} <` : e.name;
-      U.center(cx, 10, name, sel ? U.C.y : hot ? U.C.w : U.FG, sel ? U.SEL_BG : hot ? U.HOVER_BG : null);
-      const bw = Math.min(14, g.slot - 7);
+      if (gone) { U.center(cx, NAME, e.name, '#44444e'); U.center(cx, HPROW, 'slain', '#44444e'); return; }
+      const name = sel ? `► ${e.name} ◄` : e.name;
+      U.center(cx, NAME, name, sel ? U.C.y : hot ? U.C.w : U.FG, sel ? U.SEL_BG : hot ? U.HOVER_BG : null);
+      const bw = Math.min(16, g.slot - 7);
       const bx = cx - Math.floor((bw + 5) / 2);
-      U.bar(bx, 11, bw, hp, e.maxHp, U.hpColor(hp / e.maxHp));
-      U.text(bx + bw + 1, 11, String(Math.max(0, hp)), U.DIM);
+      U.bar(bx, HPROW, bw, hp, e.maxHp, U.hpColor(hp / e.maxHp));
+      U.text(bx + bw + 1, HPROW, String(Math.max(0, hp)), U.DIM);
+      U.small(bx + bw + 1 + String(Math.max(0, hp)).length, HPROW + 0.5, `/${e.maxHp}`, '#4a4a58');
 
       const it = Engine.intent(s, e);
       if (it && hp > 0) {
@@ -5207,28 +5557,30 @@ SF._file("src/ui/scenes/combat.js");
         const blink = it.kind === 'heavy' && Math.floor(now / 350) % 2;
         const txt = `{${blink ? '#ffffff' : scol}}${sym}{/} ${it.name}${it.text ? ` {d}${it.text}{/}` : ''}`;
         const len = U.plainLen(txt), max = g.slot - 1;
-        U.mtext(cx - Math.floor(Math.min(len, max) / 2), 12, txt, U.FG, null, null, max);
+        U.mtext(cx - Math.floor(Math.min(len, max) / 2), INTENT_ROW, txt, U.FG, null, null, max);
       }
       const tags = [];
-      if (e.burn > 0) tags.push(`{o}BURN ${e.burn}{/}`);
-      if (e.guard) tags.push('{b}GUARD{/}');
-      if (e.stolen > 0) tags.push(`{y}+${e.stolen}g{/}`);
-      if (tags.length) U.mcenter(cx, 13, tags.join(' '));
+      if (e.burn > 0) tags.push(`{o}burning ${e.burn}{/}`);
+      if (e.frozen > 0) tags.push(`{c}frozen ${e.frozen}{/}`);
+      if (e.guard) tags.push('{b}guarding{/}');
+      if (e.next) tags.push('{#ffe066}winding up!{/}');
+      if (e.stolen > 0) tags.push(`{y}holds ${e.stolen} of your gold{/}`);
+      if (tags.length) { const t = tags.join(' · '); U.msmall(cx - U.smallLen(t) / 2, TAGS + 0.25, t); }
     });
 
-    U.hsep(0, 14, 62);
+    U.hsep(M.x, SEP, M.w);
     if (ui.timing) U.drawTiming(now);
     else if (!view) drawMenu();
-    else U.mtext(2, 15, '{d}...{/}');
+    else U.mtext(V.x + 1, MENU, '{d}…{/}');
 
     // floating numbers over enemies
     for (const f of ui.floats) {
-      if (f.mx != null || f.x >= 62) continue;
+      if (f.mx != null || f.x >= M.x + M.w) continue;
       const t = (now - f.t0) / f.dur;
-      if (t < 1) U.center(f.x + sx, Math.max(1, f.y - Math.floor(t * 2)), f.text, f.color, U.BANNER_BG);
+      if (t < 1) U.center(f.x + sx, Math.max(V.y, f.y - Math.floor(t * 2)), f.text, f.color, U.BANNER_BG);
     }
     if (view && view.dim) {   // fading out (defeat / escape)
-      for (let y = 1; y <= 20; y++) for (let x = 1; x <= 60; x++) {
+      for (let y = V.y; y < V.y + V.h; y++) for (let x = V.x; x < V.x + V.w; x++) {
         const p = U.peek(x, y);
         if (p && p.c !== ' ') U.put(x, y, p.c, U.mix(p.f, '#0b0b10', view.dim));
       }
@@ -5277,17 +5629,17 @@ SF._file("src/ui/scenes/combat.js");
   }
 
   function drawMenu() {
-    const s = ui.s, p = s.p, d = Engine.derived(p), Y = 15;
+    const s = ui.s, p = s.p, d = Engine.derived(p), Y = MENU, X = V.x + 1, TW = V.w - 2;
     if (ui.cmenu === 'main') {
       let desc = null;
-      U.text(2, Y, 'What will you do?', U.FG);
+      U.text(X, Y, 'What will you do?', U.FG);
       U.combatOptions().forEach((o, k) => {
         const key = 'cm:' + k;
-        U.button(2 + (k % 3) * 20, Y + 1 + Math.floor(k / 3), `{y}[${k + 1}]{/} ${o.off ? '{d}' + o.label + '{/}' : o.label}`, key, o.fn, { w: 18 });
+        U.button(X + (k % 3) * 21, Y + 2 + Math.floor(k / 3), `{y}[${k + 1}]{/} ${o.off ? '{d}' + o.label + '{/}' : o.label}`, key, o.fn, { w: 19 });
         if (U.hovered(key)) desc = o.desc;
       });
       const info = desc ? `{d}${desc}{/}` : targetInfo();
-      U.wrap(info, 58, U.FG).slice(0, 2).forEach((ln, k) => U.drawLine(2, Y + 4 + k, ln));
+      U.wrap(info, TW, U.FG).slice(0, 2).forEach((ln, k) => U.drawLine(X, Y + 5 + k, ln));
       return;
     }
     const title = {
@@ -5295,16 +5647,16 @@ SF._file("src/ui/scenes/combat.js");
       spells: `{b}Spells{/}  {d}spirit ${p.sp}/${d.maxSp}{/}`,
       items: '{g}Items{/}',
     }[ui.cmenu];
-    U.mtext(2, Y, title);
-    U.button(50, Y, '{y}[0]{/} Back', 'cm:back', () => (ui.cmenu = 'main'));
+    U.mtext(X, Y, title);
+    U.button(X + TW - 10, Y, '{y}[0]{/} Back', 'cm:back', () => (ui.cmenu = 'main'));
     const list = U.combatList();
-    if (!list.length) U.text(4, Y + 1, 'Nothing to use.', U.DIM);
-    list.slice(0, 5).forEach((e, k) => {
+    if (!list.length) U.text(X + 2, Y + 1, 'Nothing to use.', U.DIM);
+    list.slice(0, 7).forEach((e, k) => {
       const costCol = e.locked ? '{d}' : e.ok ? '{y}' : '{r}';
       const el = e.el ? `{${D.elements[e.el].color}}${D.elements[e.el].name.slice(0, 5).padEnd(6)}{/}` : '      ';
       const name = e.ok ? U.pad(e.name, 16) : `{d}${U.pad(e.name, 16)}{/}`;
       const label = `{y}[${k + 1}]{/} ${name} ${costCol}${U.pad(e.cost, 6)}{/} ${el}{d}${e.desc}{/}`;
-      U.button(2, Y + 1 + k, label, 'cl:' + k, e.fn, { w: 58, max: 58 });
+      U.button(X, Y + 1 + k, label, 'cl:' + k, e.fn, { w: TW, max: TW });
     });
   }
 })();
@@ -5321,7 +5673,7 @@ SF._file("src/ui/scenes/timing.js");
    ===================================================================== */
 (function () {
   const U = SF.UI, ui = U.ui, D = SF.data;
-  const BX = 6, BW = 50;
+  const V = U.L.VIEW, BX = V.x + 4, BW = V.w - 8, Y = 17;
 
   function pos(T, now) {
     const ph = (now - T.t0) / T.sweep, m = ph % 2;
@@ -5348,23 +5700,23 @@ SF._file("src/ui/scenes/timing.js");
     if (!T.done && now - T.t0 > T.sweep * 2.6) U.resolveTiming();   // too slow: it swings anyway
     const p = T.done ? T.done.p : pos(T, now);
     const what = T.a.type === 'skill' ? D.skills[T.a.id].name : 'Strike';
-    U.mtext(2, 15, `{y}${what}!{/}  {d}stop the marker in the {/}{#ffd040}gold{/}{d} zone{/}`);
-    U.button(48, 15, '{y}[Esc]{/} Cancel', 'tm:cancel', U.cancelTiming);
+    U.mtext(V.x + 1, Y, `{y}${what}!{/}  {d}stop the marker in the {/}{#ffd040}gold{/}{d} zone{/}`);
+    U.button(V.x + V.w - 13, Y, '{y}[Esc]{/} Cancel', 'tm:cancel', U.cancelTiming);
     const r = U.region('tm:hit', U.resolveTiming);
-    U.area(BX - 1, 16, BW + 2, 3, r);
-    U.put(BX - 1, 17, '[', U.DIM); U.put(BX + BW, 17, ']', U.DIM);
+    U.area(BX - 1, Y + 1, BW + 2, 3, r);
+    U.put(BX - 1, Y + 2, '▕', U.DIM); U.put(BX + BW, Y + 2, '▏', U.DIM);
     for (let k = 0; k < BW; k++) {
       const f = (k + 0.5) / BW, d = Math.abs(f - T.center);
       const zone = d <= T.perfect / 2 ? 2 : d <= T.good / 2 ? 1 : 0;
-      U.put(BX + k, 17, zone === 2 ? '#' : zone === 1 ? '=' : '-', zone === 2 ? '#ffd040' : zone === 1 ? '#5fb85f' : '#3a3a4a', null, r);
+      U.put(BX + k, Y + 2, zone === 2 ? '█' : zone === 1 ? '▆' : '▁', zone === 2 ? '#ffd040' : zone === 1 ? '#5fb85f' : '#3a3a4a', null, r);
     }
     const mx = BX + Math.min(BW - 1, Math.floor(p * BW));
     const mcol = T.done ? (T.done.q === 'perfect' ? '#ffd040' : T.done.q === 'good' ? '#6bdc6b' : '#ff6b6b') : '#ffffff';
-    U.put(mx, 16, 'v', mcol); U.put(mx, 18, '^', mcol); U.put(mx, 17, '|', mcol, '#2c2c40');
-    if (T.done) U.center(31, 19, T.done.q === 'perfect' ? '* PERFECT! *' : T.done.q === 'good' ? 'Good hit' : 'Clumsy...', mcol);
+    U.put(mx, Y + 1, '▼', mcol); U.put(mx, Y + 3, '▲', mcol); U.put(mx, Y + 2, '┃', mcol, '#2c2c40');
+    if (T.done) U.center(V.x + V.w / 2, Y + 5, T.done.q === 'perfect' ? '★ PERFECT! ★' : T.done.q === 'good' ? 'Good hit' : 'Clumsy…', mcol);
     else {
       const feel = w.timing && w.timing.sweep < 750 ? 'fast blade, wide sweet spot' : w.timing && w.timing.sweep > 1000 ? 'slow swing, narrow sweet spot' : 'steady swing';
-      U.mtext(2, 20, `{d}${w.name}: ${feel}.  [Space] / [Enter] / click{/}`);
+      U.mtext(V.x + 1, Y + 6, `{d}${w.name}: ${feel}.  [Space] / [Enter] / click{/}`);
     }
   };
 })();
@@ -5378,9 +5730,9 @@ SF._file("src/ui/scenes/dialog.js");
   U.drawDialog = function () {
     const v = Engine.dialogView(ui.s);
     if (!v) return;
-    const w = 56, x = 3, lines = U.wrap(v.text, w - 4, U.FG), nc = v.choices.length;
-    const textRows = Math.min(lines.length, 19 - nc);
-    const h = textRows + nc + 3, y = Math.max(0, Math.floor((22 - h) / 2));
+    const M = U.L.MAP, w = 60, x = M.x + 3, lines = U.wrap(v.text, w - 4, U.FG), nc = v.choices.length;
+    const textRows = Math.min(lines.length, M.h - 5 - nc);
+    const h = textRows + nc + 3, y = Math.max(0, Math.floor((M.h - h) / 2));
     U.box(x, y, w, h, `{y}${v.name}{/}`, { bg: U.MODAL_BG });
     for (let k = 0; k < textRows; k++) U.drawLine(x + 2, y + 1 + k, lines[k]);
     if (ui.dsel >= nc) ui.dsel = 0;
@@ -5412,13 +5764,13 @@ SF._file("src/ui/scenes/shop.js");
   };
 
   U.drawShop = function () {
-    const s = ui.s, x = 2, y = 0, w = 58, h = 22, p = s.p, sh = D.shops[s.shop];
+    const s = ui.s, M = U.L.MAP, x = M.x + 2, y = M.y + 1, w = M.w - 4, h = M.h - 2, p = s.p, sh = D.shops[s.shop];
     U.box(x, y, w, h, `{y}${sh ? sh.name : 'Shop'}{/}`, { bg: U.MODAL_BG });
     U.button(x + 2, y + 1, ui.shopTab === 'buy' ? '{y}[ BUY ]{/}' : '{d}[ buy ]{/}', 'shop:tbuy', () => (ui.shopTab = 'buy'));
     U.button(x + 11, y + 1, ui.shopTab === 'sell' ? '{y}[ SELL ]{/}' : '{d}[ sell ]{/}', 'shop:tsell', () => (ui.shopTab = 'sell'));
     const g = `{y}Gold ${p.gold}{/}`;
     U.mtext(x + w - 3 - U.plainLen(g), y + 1, g);
-    for (let k = 2; k < w - 2; k++) U.put(x + k, y + 2, '-', '#2c2c38');
+    for (let k = 2; k < w - 2; k++) U.put(x + k, y + 2, '─', '#2c2c38');
     const list = U.shopEntries();
     if (!list.length) U.text(x + 3, y + 4, 'You have nothing to sell.', U.DIM);
     list.slice(0, 9).forEach((e, k) => {
@@ -5426,7 +5778,9 @@ SF._file("src/ui/scenes/shop.js");
       U.button(x + 2, yy, e.label, key, e.fn, { w: w - 4 });
       U.area(x + 2, yy + 1, w - 4, 1, U.regions.length - 1);   // description line is clickable too
       if (U.hovered(key)) U.fillBg(x + 2, yy + 1, w - 4, 1, U.HOVER_BG);
-      U.mtext(x + 6, yy + 1, `{d}${e.desc}{/}`, U.FG, null, null, w - 9);
+      const dw = w - 9;
+      if (U.plainLen(e.desc) <= dw) U.mtext(x + 6, yy + 1, `{d}${e.desc}{/}`, U.FG, null, null, dw);
+      else U.wrap(`{d}${e.desc}{/}`, dw * 2).slice(0, 2).forEach((ln, i) => U.drawSmallLine(x + 6, yy + 1 + i / 2, ln));  // long text: two tiny lines
     });
     U.button(x + w - 14, y + h - 1, '{y}[Esc]{/} Leave', 'shop:leave', () => U.doAction({ type: 'leave' }));
   };
@@ -5441,7 +5795,7 @@ SF._file("src/ui/scenes/shrine.js");
   U.chipLabel = function (c) {
     const rc = D.rarity[c.r].color;
     if (c.type === 'glyph') return `{${rc}}${c.val} ${c.name}{/}`;
-    if (c.type === 'color') return `{${c.val}}#{/} {${rc}}${c.name}{/}`;
+    if (c.type === 'color') return `{${c.val}}■{/} {${rc}}${c.name}{/}`;
     if (c.type === 'frame') {
       const F = U.FRAMES[c.val.style] || U.FRAMES.single;
       return `{${c.val.color}}${F[0]}${F[4]}${F[1]}{/} {${rc}}${c.name}{/}`;
@@ -5450,7 +5804,7 @@ SF._file("src/ui/scenes/shrine.js");
   };
 
   U.drawShrine = function (now) {
-    const s = ui.s, x = 2, y = 1, w = 58, h = 20, p = s.p;
+    const s = ui.s, M = U.L.MAP, x = M.x + 3, y = M.y + 2, w = M.w - 6, h = M.h - 4, p = s.p;
     U.box(x, y, w, h, '{m}Shrine of Echoes{/}', { bg: U.MODAL_BG });
     U.drawSprite('shrine', x + 9, y + 8, { color: '#d08bff' });
     U.mtext(x + 19, y + 2, `Spirit shards: {m}${p.shards}{/}`);
@@ -5460,7 +5814,7 @@ SF._file("src/ui/scenes/shrine.js");
     U.button(x + 19, y + 7, '{y}[O]{/} Outfits', 'sh:out', () => U.openOverlay('outfit'));
     const total = D.rarity.reduce((t, r) => t + r.weight, 0);
     U.mcenter(x + w / 2, y + 9, D.rarity.map((r) => `{${r.color}}${r.name} ${Math.round((r.weight / total) * 100)}%{/}`).join('  '));
-    for (let k = 2; k < w - 2; k++) U.put(x + k, y + 10, '-', '#2c2c38');
+    for (let k = 2; k < w - 2; k++) U.put(x + k, y + 10, '─', '#2c2c38');
 
     if (ui.pull) {
       const shown = Math.min(ui.pull.results.length, Math.floor((now - ui.pull.t0) / 140) + 1);
@@ -5485,7 +5839,7 @@ SF._file("src/ui/scenes/gameover.js");
   const U = SF.UI, ui = U.ui, R = SF.data.rules;
 
   U.drawGameOver = function () {
-    const s = ui.s, x = 9, y = 5, w = 44, h = 11, cx = x + Math.floor(w / 2), p = s.p;
+    const s = ui.s, M = U.L.MAP, w = 46, h = 11, x = M.x + Math.floor((M.w - w) / 2), y = M.y + Math.floor((M.h - h) / 2), cx = x + Math.floor(w / 2), p = s.p;
     U.box(x, y, w, h, '{r}Fallen{/}', { bg: '#1a0c12', color: '#8a2a3a' });
     U.center(cx, y + 2, 'Y O U   H A V E   F A L L E N', U.C.r);
     U.center(cx, y + 4, `Slain by ${s.dead ? s.dead.by : 'the dark'}.`, U.FG);
@@ -5497,32 +5851,151 @@ SF._file("src/ui/scenes/gameover.js");
 
 SF._file("src/ui/overlays/inventory.js");
 'use strict';
-/* SHARDFALL ui - overlays/inventory.js   [I] */
+/* =====================================================================
+   SHARDFALL ui - overlays/inventory.js   [I]
+   A Minecraft-style inventory:
+     - 32 backpack slots (the top row is the hotbar: keys 1-8 while exploring)
+     - click a slot to pick its item up, click another slot to put it
+       there (swapping if it's taken); click the background to put it back
+     - right-click: use an item / equip a weapon right away
+     - drop a weapon on the EQUIPPED slot to wield it
+     - hover for a tooltip; keyboard: arrows, Space = pick up / place,
+       Enter = use / equip, Esc = put back / close
+   Slot drawing is shared with the Pack panel (scenes/pack.js).
+   ===================================================================== */
 (function () {
   const U = SF.UI, ui = U.ui, D = SF.data;
+  const X = 0, Y = 0, W = 128, H = 41;
+  const COLS = 8, ROWS = 4, SW = 9, SH = 5, GX = 50, GY = 5;          // backpack grid
+  const EQ = { x: 9, y: 5, w: 36, h: 8 };                               // equipped weapon slot
 
-  U.closeBtn = function (x, y, w, h) {
-    U.button(x + w - 14, y + h - 2, '{y}[Esc]{/} Close', 'ov:close', () => (ui.overlay = null));
+  const slotXY = (k) => [GX + (k % COLS) * SW, GY + Math.floor(k / COLS) * SH];
+  const heldInfo = (bag) => (ui.held != null ? bag[ui.held] : null);
+
+  // Click on a backpack slot.
+  function clickSlot(k) {
+    const bag = Engine.bag(ui.s);
+    ui.invSel = k;
+    if (ui.held != null) {
+      if (ui.held !== k) U.doAction({ type: 'arrange', from: ui.held, to: k });
+      ui.held = null;
+    } else if (bag[k]) ui.held = k;
+  }
+  // Click on the equipped slot (with a weapon in hand = equip it).
+  function clickEquip() {
+    const bag = Engine.bag(ui.s), h = heldInfo(bag);
+    ui.invSel = -1;
+    if (!h) return;
+    if (h.kind === 'weapon') U.doAction({ type: 'equip', id: h.id });
+    else Engine.note(ui.s, `{d}The ${h.name} is not a weapon.{/}`);
+    ui.held = null;
+  }
+  function quick(k) {               // right-click / Enter
+    const info = Engine.bag(ui.s)[k];
+    ui.held = null;
+    if (info) U.itemAction(info);
+  }
+
+  U.invClose = function () { ui.held = null; ui.overlay = null; };
+
+  U.invKey = function (k) {
+    const n = Engine.BAG_SIZE;
+    let sel = ui.invSel == null ? 0 : ui.invSel;
+    if (k === 'Escape' || k === 'i') {
+      if (ui.held != null) ui.held = null; else U.invClose();
+      return true;
+    }
+    if (k === 'ArrowLeft' || k === 'a') sel = sel === -1 ? -1 : sel % COLS === 0 ? -1 : sel - 1;
+    else if (k === 'ArrowRight' || k === 'd') sel = sel === -1 ? 0 : sel % COLS === COLS - 1 ? sel : sel + 1;
+    else if (k === 'ArrowUp' || k === 'w') sel = sel === -1 ? -1 : sel - COLS >= 0 ? sel - COLS : sel;
+    else if (k === 'ArrowDown' || k === 's') sel = sel === -1 ? -1 : sel + COLS < n ? sel + COLS : sel;
+    else if (k === ' ') { if (sel === -1) clickEquip(); else clickSlot(sel); return true; }
+    else if (k === 'Enter') { if (sel >= 0) quick(sel); return true; }
+    else return false;
+    ui.invSel = sel;
+    return true;
   };
 
-  U.drawInv = function () {
-    const s = ui.s, x = 2, y = 1, w = 58, h = 20, p = s.p;
-    U.box(x, y, w, h, 'Inventory', { bg: U.MODAL_BG });
-    let yy = y + 2;
-    U.text(x + 3, yy++, 'Weapons', U.C.c);
-    for (const id of p.weapons) {
-      const wd = D.weapons[id], on = p.weapon === id;
-      U.button(x + 3, yy++, `${on ? '{y}>{/}' : ' '} ${U.pad(wd.name, 14)} {d}${wd.desc}{/}`, 'inv:w:' + id,
-        () => U.doAction({ type: 'equip', id }), { w: w - 6, max: w - 6, bg: on ? U.SEL_BG : null });
+  U.drawInv = function (now) {
+    const s = ui.s, p = s.p, bag = Engine.bag(s), w = D.weapons[p.weapon], d = Engine.derived(p);
+    U.box(X, Y, W, H, '{y}Inventory{/}', { bg: U.MODAL_BG });
+    U.area(X + 1, Y + 1, W - 2, H - 2, U.region('inv:bg', () => { ui.held = null; }));
+    if (ui.invSel == null) ui.invSel = 0;
+
+    // ---- equipped weapon ----
+    U.text(EQ.x, Y + 2, 'Equipped', U.C.c);
+    const eqHot = U.hovered('inv:weapon'), eqSel = ui.invSel === -1, h = heldInfo(bag);
+    const eqCol = h && h.kind === 'weapon' && eqHot ? '#ffd866' : eqSel ? '#ffd866' : eqHot ? '#8a8aa8' : '#34344a';
+    U.box(EQ.x, EQ.y, EQ.w, EQ.h, null, { color: eqCol, style: 'single' });
+    U.fillBg(EQ.x + 1, EQ.y + 1, EQ.w - 2, EQ.h - 2, eqHot ? '#1a1a28' : '#101018');
+    const re = U.region('inv:weapon', clickEquip);
+    U.area(EQ.x, EQ.y, EQ.w, EQ.h, re);
+    U.drawSprite(w.sprite || p.weapon, EQ.x + Math.floor(EQ.w / 2), EQ.y + EQ.h - 3, { clip: { x0: EQ.x + 1, y0: EQ.y + 1, x1: EQ.x + EQ.w - 2, y1: EQ.y + EQ.h - 2 } });
+    U.center(EQ.x + EQ.w / 2, EQ.y + EQ.h - 2, w.name, U.C.w);
+    U.small(EQ.x + 1, EQ.y, 'weapon', eqCol);
+
+    // ---- you ----
+    let y = EQ.y + EQ.h + 1;
+    U.mtext(EQ.x, y++, `${p.name} {d}· level ${p.lvl}{/}`, Engine.look(p).color);
+    for (const [lab, v, m, c] of [['HP', p.hp, d.maxHp, U.hpColor(p.hp / d.maxHp)], ['ST', p.st, d.maxSt, '#7ddc6f'], ['SP', p.sp, d.maxSp, '#5ca8ff'], ['SAN', p.san, d.maxSan, '#c792ea']]) {
+      U.text(EQ.x, y, lab, U.DIM); U.bar(EQ.x + 4, y, 20, v, m, c); U.small(EQ.x + 25, y + 0.5, `${v}/${m}`, U.DIM); y++;
     }
-    yy++;
-    U.text(x + 3, yy++, 'Items', U.C.c);
-    const inv = Engine.inventory(s);
-    if (!inv.length) U.text(x + 5, yy++, 'Your pack is empty.', U.DIM);
-    inv.forEach((it, k) => U.button(x + 3, yy++, `{y}[${k + 1}]{/} ${U.pad(it.name, 15)} {d}x${it.count}  ${it.desc}{/}`, 'inv:i:' + it.id,
-      () => U.doAction({ type: 'use', id: it.id }), { w: w - 6, max: w - 6 }));
-    U.mtext(x + 3, y + h - 2, '{d}Click a weapon to equip it, an item to use it{/}');
-    U.closeBtn(x, y, w, h);
+    U.mtext(EQ.x, y++, `{y}◉ Gold{/} ${p.gold}   {m}◇ Shards{/} ${p.shards}`);
+    U.mtext(EQ.x, y++, `{d}Dmg{/} ${d.dmgMin}-${d.dmgMax}   {d}Crit{/} ${U.pct(d.crit)}`);
+
+    // ---- backpack ----
+    U.text(GX, Y + 2, 'Backpack', U.C.c);
+    U.small(GX + 10, Y + 2.5, `top row = hotbar (keys 1-8)  ·  ${bag.filter((b) => !b).length} free slots`, U.DIM);
+    let hot = -2;
+    for (let k = 0; k < Engine.BAG_SIZE; k++) {
+      const [sx, sy] = slotXY(k), key = 'inv:slot:' + k;
+      const r = U.region(key, () => clickSlot(k), () => quick(k));
+      if (U.hovered(key)) hot = k;
+      U.drawSlot(sx, sy, SW, SH, bag[k], {
+        hot: U.hovered(key), sel: ui.invSel === k, held: ui.held === k, label: true,
+        key: k < COLS ? String(k + 1) : null, region: r,
+      });
+    }
+    U.text(GX - 2, GY + 2, '▸', '#6a6a80');   // marks the hotbar row
+
+    // ---- details (cursor or hovered) ----
+    const focus = hot >= 0 ? bag[hot] : ui.invSel >= 0 ? bag[ui.invSel] : null;
+    const DX = EQ.x, DY = 26;
+    U.rule(DX, DY - 1, X + W - 3 - DX, 'Details');
+    if (focus) {
+      const col = focus.kind === 'weapon' ? '#ffb347' : '#9fd8a0';
+      U.drawSprite(focus.icon, DX + 2, DY + 2);
+      U.mtext(DX + 6, DY, `{${col}}${focus.name}{/}${focus.count > 1 ? `  {d}×${focus.count}{/}` : ''}  {d}${focus.kind === 'weapon' ? 'weapon' : 'consumable'}{/}`);
+      U.wrap(focus.desc, 70, U.DIM).slice(0, 2).forEach((ln, k) => U.drawLine(DX + 6, DY + 1 + k, ln));
+      if (focus.kind === 'weapon') {
+        const fw = focus.def, T = fw.timing || {};
+        U.small(DX + 6, DY + 3, `damage ${fw.min}-${fw.max} (+${d.dmgMin - w.min} from you)  ·  crit +${fw.crit || 0}%  ·  ${T.sweep < 750 ? 'fast' : T.sweep > 1000 ? 'slow' : 'steady'} swing${fw.el && fw.el !== 'phys' ? '  ·  ' + D.elements[fw.el].name.toLowerCase() : ''}`, '#a8a8b8');
+        U.drawSprite(fw.sprite || focus.id, DX + 92, DY + 5, { clip: { x0: DX + 76, y0: DY, x1: X + W - 2, y1: DY + 6 } });
+      }
+      const k = hot >= 0 ? hot : ui.invSel;
+      const verb = focus.kind === 'weapon' ? 'Equip' : 'Use';
+      U.button(DX + 6, DY + 5, `{y}[Enter]{/} ${verb}`, 'inv:do', () => quick(k));
+    } else U.mtext(DX, DY, '{d}Hover or select a slot to see what it is.{/}');
+    U.small(DX, Y + H - 2.5, 'click: pick up / put down  ·  right-click: use or equip  ·  drop a weapon on EQUIPPED to wield it  ·  arrows + Space / Enter  ·  [Esc] close', '#6a6a80');
+
+    // ---- the item in your hand follows the mouse; tooltip otherwise ----
+    const hc = ui.hcell;
+    if (h && hc) {
+      U.drawSprite(h.icon, hc.x + 1, hc.y + 1);
+      if (h.count > 1) U.small(hc.x + 2.5, hc.y + 1.5, String(h.count), '#ffffff');
+    } else if (hot >= 0 && bag[hot] && hc) U.tooltip(hc.x + 2, hc.y + 1, bag[hot]);
+  };
+
+  // A small floating tooltip, Minecraft style.
+  U.tooltip = function (x, y, info) {
+    const col = info.kind === 'weapon' ? '#ffb347' : '#9fd8a0';
+    const lines = U.wrap(info.desc, 44, '#b8b8c8');
+    const w = Math.max([...info.name].length + 4, 24), h = 3 + Math.ceil(lines.length / 2);
+    if (x + w > U.COLS - 1) x = U.COLS - 1 - w;
+    if (y + h > U.ROWS - 1) y = U.ROWS - 1 - h;
+    U.box(x, y, w, h, null, { bg: '#14081e', color: '#5a2a8a', style: 'rounded' });
+    U.text(x + 2, y + 1, info.name, col);
+    lines.forEach((ln, k) => U.drawSmallLine(x + 2, y + 2 + k / 2, ln));
   };
 })();
 
@@ -5533,9 +6006,9 @@ SF._file("src/ui/overlays/character.js");
   const U = SF.UI, ui = U.ui, D = SF.data;
 
   U.drawChar = function () {
-    const s = ui.s, x = 2, y = 1, w = 58, h = 20, p = s.p, d = Engine.derived(p), L = Engine.look(p), pct = U.pct;
+    const s = ui.s, x = 2, y = 1, w = 62, h = 24, p = s.p, d = Engine.derived(p), L = Engine.look(p), pct = U.pct;
     U.box(x, y, w, h, 'Character', { bg: U.MODAL_BG });
-    U.mtext(x + 3, y + 1, `${p.name} {d}${L.title} - Level ${p.lvl}{/}`, L.color);
+    U.mtext(x + 3, y + 1, `${p.name} {d}${L.title} · Level ${p.lvl}{/}`, L.color);
     const pts = p.points ? `{y}${p.points} point${p.points > 1 ? 's' : ''} to spend{/}` : '{d}no points to spend{/}';
     U.mtext(x + w - 3 - U.plainLen(pts), y + 1, pts);
     D.stats.forEach((st, k) => {
@@ -5555,7 +6028,7 @@ SF._file("src/ui/overlays/character.js");
       `{m}Sanity{/} ${p.san}/${d.maxSan}   {d}Dread resist{/} ${pct(d.dreadResist)}   {d}Terror{/} ${pct(d.terror)}`,
     ];
     rows.forEach((r, k) => U.mtext(x + 3, y + 9 + k, r, U.FG, null, null, w - 6));
-    U.mtext(x + 3, y + 16, `{d}Kills ${p.kills} - Steps ${p.steps} - Deaths ${p.deaths} - Stones ${p.stones || 0} - Echoes ${p.pulls}{/}`);
+    U.mtext(x + 3, y + 17, `{d}Kills ${p.kills} · Steps ${p.steps} · Deaths ${p.deaths} · Stones ${p.stones || 0} · Echoes ${p.pulls}{/}`);
     U.mtext(x + 3, y + h - 2, p.points > 0 ? '{d}[1-5] or [+] to raise a stat{/}' : '{d}+1 point per level. Standing stones give more.{/}');
     U.closeBtn(x, y, w, h);
   };
@@ -5568,7 +6041,7 @@ SF._file("src/ui/overlays/quests.js");
   const U = SF.UI, ui = U.ui;
 
   U.drawQuests = function () {
-    const x = 2, y = 1, w = 58, h = 20;
+    const x = 2, y = 1, w = 62, h = 24;
     U.box(x, y, w, h, 'Quests', { bg: U.MODAL_BG });
     const order = { ready: 0, active: 1, done: 2 };
     const qs = Engine.questLog(ui.s).sort((a, b) => order[a.status] - order[b.status]);
@@ -5603,7 +6076,7 @@ SF._file("src/ui/overlays/journal.js");
    ===================================================================== */
 (function () {
   const U = SF.UI, ui = U.ui, D = SF.data;
-  const X = 0, Y = 0, W = 100, H = 33;
+  const X = 0, Y = 0, W = 128, H = 41;
 
   U.journalEntries = () => Engine.journal(ui.s);
 
@@ -5619,19 +6092,19 @@ SF._file("src/ui/overlays/journal.js");
   function drawBeasts(now) {
     const list = U.journalEntries(), known = list.filter((e) => e.known).length;
     U.mtext(X + W - 22, Y + 1, `{d}discovered{/} {y}${known}{/}{d}/${list.length}{/}`);
-    for (let k = 2; k < W - 2; k++) U.put(X + k, Y + 2, '-', '#2c2c38');
+    for (let k = 2; k < W - 2; k++) U.put(X + k, Y + 2, '─', '#2c2c38');
     if (ui.jSel >= list.length) ui.jSel = 0;
     // left: the list
     list.forEach((e, k) => {
       const yy = Y + 3 + k;
       if (yy > Y + H - 3) return;
-      const label = e.known ? `${U.pad(e.name, 17)}{d}${String(e.kills).padStart(4)}{/}` : '{d}???{/}';
-      U.button(X + 2, yy, `${ui.jSel === k ? '{y}>{/}' : ' '} ${label}`, 'jr:' + k, () => (ui.jSel = k),
-        { w: 25, bg: ui.jSel === k ? U.SEL_BG : null, color: e.known ? (e.boss ? '#ff8a8a' : U.FG) : U.DIM });
+      const label = e.known ? `${U.pad(e.name, 19)}{d}${String(e.kills).padStart(4)}{/}` : '{d}? ? ?{/}';
+      U.button(X + 2, yy, `${ui.jSel === k ? '{y}►{/}' : ' '} ${label}`, 'jr:' + k, () => (ui.jSel = k),
+        { w: 27, bg: ui.jSel === k ? U.SEL_BG : null, color: e.known ? (e.boss ? '#ff8a8a' : U.FG) : U.DIM });
     });
-    for (let yy = Y + 3; yy < Y + H - 1; yy++) U.put(X + 28, yy, '|', '#2c2c38');
+    for (let yy = Y + 3; yy < Y + H - 1; yy++) U.put(X + 30, yy, '│', '#2c2c38');
     // right: the entry
-    const e = list[ui.jSel], rx = X + 31, rw = W - 34;
+    const e = list[ui.jSel], rx = X + 33, rw = W - 36;
     if (!e || !e.known) {
       U.mtext(rx, Y + 4, '{d}You have not met this creature yet.{/}');
       U.wrap('{d}Explore further: new areas hold new beasts, and the first kill of each species is worth double XP.{/}', rw, U.FG)
@@ -5639,9 +6112,9 @@ SF._file("src/ui/overlays/journal.js");
       return;
     }
     U.mtext(rx, Y + 3, `{${e.color}}${e.name}{/}${e.boss ? '  {r}BOSS{/}' : ''}`);
-    U.mtext(rx, Y + 4, `{d}met ${e.seen} - defeated ${e.kills}${e.habitat.length ? ' - found in ' + e.habitat.join(', ') : ''}{/}`, U.FG, null, null, rw);
+    U.mtext(rx, Y + 4, `{d}met ${e.seen} · defeated ${e.kills}${e.habitat.length ? ' · found in ' + e.habitat.join(', ') : ''}{/}`, U.FG, null, null, rw);
     // the picture, in a frame
-    const sp = U.sprite(e.sprite), fw = Math.max(24, (sp ? sp.w : 10) + 4), fh = Math.max(11, (sp ? sp.h : 4) + 3);
+    const sp = U.sprite(e.sprite), fw = Math.max(30, (sp ? sp.w : 10) + 6), fh = Math.max(13, (sp ? sp.h : 4) + 4);
     U.box(rx, Y + 6, fw, fh, null, { color: '#2c2c38', style: 'single' });
     U.drawSprite(e.sprite, rx + Math.floor(fw / 2), Y + 6 + fh - 2, { color: e.color, now });
     // facts beside / below the picture
@@ -5666,7 +6139,7 @@ SF._file("src/ui/overlays/journal.js");
   function drawPlaces() {
     const places = Engine.places(ui.s), total = Object.keys(D.maps).length;
     U.mtext(X + W - 22, Y + 1, `{d}visited{/} {y}${places.length}{/}{d}/${total}{/}`);
-    for (let k = 2; k < W - 2; k++) U.put(X + k, Y + 2, '-', '#2c2c38');
+    for (let k = 2; k < W - 2; k++) U.put(X + k, Y + 2, '─', '#2c2c38');
     U.mtext(X + 3, Y + 3, `{d}${U.pad('Area', 26)}${U.pad('Danger', 12)}${U.pad('Altitude', 10)}${U.pad('Explored', 22)}${U.pad('Chests', 9)}Stones{/}`);
     let y = Y + 5, lastRegion = null;
     for (const pl of places.sort((a, b) => (a.region > b.region ? 1 : a.region < b.region ? -1 : b.z - a.z))) {
@@ -5697,7 +6170,7 @@ SF._file("src/ui/overlays/outfits.js");
   U.OUTFIT_TYPES = [['glyph', 'Glyph'], ['color', 'Color'], ['title', 'Title'], ['frame', 'Frame']];
 
   U.drawOutfit = function () {
-    const s = ui.s, x = 2, y = 1, w = 58, h = 20, p = s.p, L = Engine.look(p);
+    const s = ui.s, x = 2, y = 1, w = 62, h = 24, p = s.p, L = Engine.look(p);
     U.box(x, y, w, h, '{m}Outfits{/}', { bg: U.MODAL_BG });
     U.put(x + 3, y + 1, L.glyph, L.color);
     U.mtext(x + 5, y + 1, `${p.name} {d}${L.title}{/}`, L.color);
@@ -5705,7 +6178,7 @@ SF._file("src/ui/overlays/outfits.js");
     const all = Object.values(D.cosmetics);
     U.OUTFIT_TYPES.forEach(([type, label], row) => {
       const ofType = all.filter((c) => c.type === type), owned = ofType.filter((c) => p.cos.includes(c.id));
-      U.mtext(x + 2, yy++, `${ui.outfitRow === row ? '{y}>{/}' : ' '} {c}${label}{/} {d}${owned.length}/${ofType.length}{/}`);
+      U.mtext(x + 2, yy++, `${ui.outfitRow === row ? '{y}►{/}' : ' '} {c}${label}{/} {d}${owned.length}/${ofType.length}{/}`);
       let cx = x + 4;
       for (const c of owned) {
         const lab = U.chipLabel(c), len = U.plainLen(lab) + 2;
@@ -5717,7 +6190,7 @@ SF._file("src/ui/overlays/outfits.js");
       }
       yy++;
     });
-    U.mtext(x + 2, y + h - 2, '{d}Click to wear - Up/Down slot - Left/Right cycle{/}');
+    U.mtext(x + 2, y + h - 2, '{d}Click to wear · ↑↓ slot · ←→ cycle{/}');
     U.closeBtn(x, y, w, h);
   };
 })();
@@ -5730,9 +6203,10 @@ SF._file("src/ui/overlays/help.js");
 
   const HELP = [
     ['{y}Move{/}', 'WASD, arrow keys or the numpad (y u b n for diagonals). Or click any explored tile to walk there.'],
-    ['{y}Interact{/}', 'Walk into people ({y}&{/}), chests ({y}${/}), signs ({y}P{/}) and the shrine ({m}n{/}). Glowing paths lead to new areas.'],
-    ['{y}Terrain{/}', 'Steep slopes ({y}/{/}) cost stamina to climb. Ledges ({y}_{/}) can only be hopped down. {c}<{/} climbs up, {c}>{/} goes down. Cracked walls may hide passages.'],
-    ['{y}Growth{/}', 'Each level gives 1 stat point. Standing stones ({c}I{/}) hidden in the world give more. New areas, lookouts ({w}!{/}) and first kills give bonus XP; weak foes give little.'],
+    ['{y}Interact{/}', 'Walk into people ({y}☺{/}), chests ({y}▣{/}), signs ({#c8a070}╤{/}) and the shrine ({m}Ω{/}). Glowing paths lead to new areas.'],
+    ['{y}Terrain{/}', 'Steep slopes ({y}╱{/}) cost stamina to climb. Ledges ({y}▁{/}) can only be hopped down. {c}⇑{/} climbs up, {c}⇓{/} goes down. Cracked walls may hide passages.'],
+    ['{y}Growth{/}', 'Each level gives 1 stat point. Standing stones ({c}Π{/}) hidden in the world give more. New areas, lookouts ({w}☼{/}) and first kills give bonus XP; weak foes give little.'],
+    ['{y}Items{/}', 'Click an item in the Pack (bottom right) to use it, even mid-fight. [1-8] use the hotbar while exploring. [I] opens the full inventory: click to pick up and place, right-click to use or equip.'],
     null,
     ['{y}Combat{/}', '[1] Attack  [2] Skills  [3] Spells  [4] Items  [5] Defend  [6] Flee. Tab or click to change target.'],
     ['{y}Intents{/}', 'Under each enemy is what it will do next turn. {o}!!{/} marks a heavy blow: Defend to take only 20% and riposte. {y}*{/} means it is winding up.'],
@@ -5746,11 +6220,11 @@ SF._file("src/ui/overlays/help.js");
     ['{m}Willpower{/}', 'Keep fighting below 0 HP (Brink), deal more damage when badly hurt (Fury), resist sanity loss.'],
     ['{m}Sanity{/}', 'Dread attacks drain it. Under 30 you may freeze; at 0 you deal less damage. Tea, the hermit and the inn restore it.'],
     null,
-    ['{y}Keys{/}', '[I]tems [C]haracter [J]ournal [Q]uests [O]utfits [?]help [Esc]menu'],
+    ['{y}Keys{/}', '[I]nventory  [C]haracter  [J]ournal  [Q]uests  [O]utfits  [?] help  [Esc] menu  ·  PgUp/PgDn or the wheel scroll the log'],
   ];
 
   U.drawHelp = function () {
-    const x = 6, y = 0, w = 88, h = 33;
+    const w = 104, h = 40, x = Math.floor((U.COLS - w) / 2), y = 0;
     U.box(x, y, w, h, '{y}How to play{/}', { bg: U.MODAL_BG });
     let yy = y + 2;
     for (const e of HELP) {
@@ -5778,15 +6252,13 @@ SF._file("src/ui/overlays/menu.js");
     ['Save game', () => { U.saveGame(); Engine.note(ui.s, '{d}Game saved.{/}'); ui.overlay = null; }],
     [`Timed strikes     ${onOff(U.settings.timed)}`, toggle('timed')],
     [`Fast animations   ${onOff(U.settings.fast)}`, toggle('fast')],
-    [`Strict ASCII      ${onOff(U.settings.ascii)}`, toggle('ascii')],
     ['Quit to title', U.quitToTitle],
   ];
 
   U.drawMenu = function () {
-    const items = U.menuItems(), x = 14, y = 3, w = 34, h = items.length * 2 + 5;
+    const items = U.menuItems(), w = 36, h = items.length * 2 + 3, x = U.L.MAP.x + Math.floor((U.L.MAP.w - w) / 2), y = 4;
     U.box(x, y, w, h, 'Menu', { bg: U.MODAL_BG });
     items.forEach(([label, fn], k) => U.button(x + 2, y + 2 + k * 2, `{y}[${k + 1}]{/} ${label}`, 'menu:' + k, fn, { w: w - 4 }));
-    U.mtext(x + 2, y + h - 2, '{d}Strict ASCII swaps frame lines too{/}');
   };
 })();
 
@@ -5860,15 +6332,11 @@ SF._file("src/ui/input.js");
   }
 
   function overlayKey(k) {
+    if (ui.overlay === 'inv') return U.invKey(k);
     const n = parseInt(k, 10);
-    const closeKey = { inv: 'i', char: 'c', quests: 'q', outfit: 'o', help: '?', journal: 'j' }[ui.overlay];
+    const closeKey = { char: 'c', quests: 'q', outfit: 'o', help: '?', journal: 'j' }[ui.overlay];
     if (k === 'Escape' || k === closeKey) { ui.overlay = null; return true; }
     switch (ui.overlay) {
-      case 'inv': {
-        const inv = Engine.inventory(ui.s);
-        if (n >= 1 && n <= inv.length) { U.doAction({ type: 'use', id: inv[n - 1].id }); return true; }
-        return false;
-      }
       case 'char':
         if (n >= 1 && n <= D.stats.length) { U.doAction({ type: 'alloc', stat: D.stats[n - 1].k }); return true; }
         return false;
@@ -5899,11 +6367,11 @@ SF._file("src/ui/input.js");
     }
     if (k === 'Escape' || k === '0' || k === 'Backspace') { ui.cmenu = 'main'; return true; }
     const list = U.combatList();
-    if (n >= 1 && n <= Math.min(5, list.length)) { list[n - 1].fn(); return true; }
+    if (n >= 1 && n <= Math.min(7, list.length)) { list[n - 1].fn(); return true; }
     return false;
   }
 
-  function gameKey(k) {
+  function gameKey(k, code) {
     const s = ui.s;
     if (k === 'PageUp') { ui.logScroll += 4; return true; }
     if (k === 'PageDown') { ui.logScroll = Math.max(0, ui.logScroll - 4); return true; }
@@ -5911,6 +6379,8 @@ SF._file("src/ui/input.js");
     const n = parseInt(k, 10);
     switch (s.scene) {
       case 'explore':
+        // top-row number keys use the hotbar; numpad digits (and letters/arrows) move
+        if (code && code.startsWith('Digit') && n >= 1 && n <= 8) { U.itemAction(Engine.bag(s)[n - 1]); return true; }
         if (MOVE[k]) { ui.walk = []; U.doAction({ type: 'move', dx: MOVE[k][0], dy: MOVE[k][1] }); return true; }
         if (k === 'i') U.openOverlay('inv');
         else if (k === 'c') U.openOverlay('char');
@@ -5961,7 +6431,7 @@ SF._file("src/ui/input.js");
     if (ui.screen === 'game' && U.anim.busy()) { U.anim.skip(); used = true; }
     else if (ui.screen === 'title') used = titleKey(k);
     else if (ui.screen === 'create') used = createKey(e);
-    else used = gameKey(k);
+    else used = gameKey(k, e.code);
     if (used) { e.preventDefault(); U.render(); }
   });
 
@@ -5978,7 +6448,7 @@ SF._file("src/ui/input.js");
     const moved = !ui.hcell || !c || c.x !== ui.hcell.x || c.y !== ui.hcell.y;
     const old = ui.hover;
     ui.hcell = c;
-    if (key !== old || (key === 'map' && moved)) { ui.hover = key; U.render(); }
+    if (key !== old || (moved && (key === 'map' || ui.overlay === 'inv'))) { ui.hover = key; U.render(); }
   });
   screen.addEventListener('mouseleave', () => { ui.hover = null; ui.hcell = null; U.render(); });
   screen.addEventListener('click', (e) => {
@@ -5987,13 +6457,24 @@ SF._file("src/ui/input.js");
     if (ui.screen === 'game' && U.anim.busy()) { U.anim.skip(); return; }
     const r = U.rg[c.y * U.COLS + c.x];
     // while the strike bar is up, a click anywhere on the combat panel swings
-    if (ui.timing && c.x < 62 && c.y < 22 && !(r >= 0 && U.regions[r].key === 'tm:cancel')) { U.resolveTiming(); return; }
+    const M = U.L.MAP;
+    if (ui.timing && c.x < M.x + M.w && c.y < M.y + M.h && !(r >= 0 && U.regions[r].key === 'tm:cancel')) { U.resolveTiming(); return; }
     if (r >= 0) { U.regions[r].fn(c.x, c.y); U.render(); }
+  });
+  // right-click: a region's quick action (use / equip), if it has one
+  screen.addEventListener('contextmenu', (e) => {
+    const c = cellAt(e);
+    if (!c || ui.screen !== 'game') return;
+    e.preventDefault();
+    if (U.anim.busy()) { U.anim.skip(); return; }
+    const r = U.rg[c.y * U.COLS + c.x];
+    if (r >= 0 && U.regions[r].alt) { U.regions[r].alt(c.x, c.y); U.render(); }
   });
   screen.addEventListener('wheel', (e) => {
     if (ui.screen !== 'game') return;
     const c = cellAt(e);
-    if (!c || c.y < 22 || c.y > 32) return;
+    const L = U.L.LOG;
+    if (!c || c.y < L.y || c.y >= L.y + L.h || c.x >= L.x + L.w) return;
     e.preventDefault();
     ui.logScroll = Math.max(0, ui.logScroll + (e.deltaY < 0 ? 2 : -2));
     U.render();
@@ -6035,6 +6516,7 @@ SF._file("src/ui/main.js");
     U.drawSide(now);
     U.anim.draw(now);          // effects on top of both panels
     U.drawLog();
+    U.drawPack();
     U.drawBar();
     if (!U.anim.busy()) {
       if (s.scene === 'dialog') U.drawDialog();
@@ -6043,7 +6525,7 @@ SF._file("src/ui/main.js");
       else if (s.scene === 'gameover') U.drawGameOver();
     }
     switch (ui.overlay) {
-      case 'inv': U.drawInv(); break;
+      case 'inv': U.drawInv(now); break;
       case 'char': U.drawChar(); break;
       case 'quests': U.drawQuests(); break;
       case 'journal': U.drawJournal(now); break;
@@ -6068,7 +6550,7 @@ SF._file("src/ui/main.js");
       console.error(e);
       U.text(1, 0, ` Drawing error: ${e.message} `.slice(0, 98), '#ff6b6b', '#2a0a10');
     }
-    if (SF.problems.length && ui.screen === 'title') U.text(1, 33, ` ${SF.problems.length} content problem(s): see the browser console (F12) `, '#ff9a4a');
+    if (SF.problems.length && ui.screen === 'title') U.text(1, U.ROWS - 1, ` ${SF.problems.length} content problem(s): see the browser console (F12) `, '#ff9a4a');
     U.flush();
     const dt = nextFrame(now);
     if (dt && (!timer || now + dt < due - 4)) {     // (re)schedule if we need a frame sooner
@@ -6085,7 +6567,9 @@ SF._file("src/ui/main.js");
     const r = el.getBoundingClientRect();
     if (!r.width || !r.height) return;
     const scale = Math.min((innerWidth - 8) / r.width, (innerHeight - 8) / r.height);
-    el.style.fontSize = Math.max(6, 20 * scale).toFixed(2) + 'px';
+    const px = Math.max(6, 20 * scale);
+    el.style.fontSize = px.toFixed(2) + 'px';
+    U.fineEl.style.fontSize = (px / 2).toFixed(3) + 'px';    // the tiny-text layer is exactly half size
   }
 
   /* ---------- Boot ---------- */

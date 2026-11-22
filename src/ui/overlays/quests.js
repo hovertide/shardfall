@@ -4,7 +4,7 @@
   const U = SF.UI, ui = U.ui;
 
   U.drawQuests = function () {
-    const x = 2, y = 1, w = 58, h = 20;
+    const x = 2, y = 1, w = 62, h = 24;
     U.box(x, y, w, h, 'Quests', { bg: U.MODAL_BG });
     const order = { ready: 0, active: 1, done: 2 };
     const qs = Engine.questLog(ui.s).sort((a, b) => order[a.status] - order[b.status]);
